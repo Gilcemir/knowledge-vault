@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Data Manipulation — Cheat Sheet</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f17;
+    --surface: #141720;
+    --surface2: #1c2030;
+    --border: #252a3a;
+    --accent: #61efce;
+    --accent2: #f7b731;
+    --accent3: #f56565;
+    --accent4: #7c83fd;
+    --text: #e2e8f0;
+    --text-muted: #6b7ea0;
+    --keyword: #f7b731;
+    --string: #61efce;
+    --comment: #4a5578;
+    --func: #7c83fd;
+    --number: #f56565;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 0 0 80px 0;
+  }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, #0d0f17 0%, #141720 40%, #1a1f35 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 40px 50px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  header::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(97,239,206,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 30%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(124,131,253,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .header-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0.8;
+  }
+
+  h1 {
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -1.5px;
+    color: #fff;
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    margin-top: 14px;
+    font-size: 15px;
+    color: var(--text-muted);
+    font-weight: 400;
+    max-width: 480px;
+    line-height: 1.6;
+  }
+
+  .pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 28px;
+  }
+
+  .pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+
+  /* Layout */
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 24px 0;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 20px;
+  }
+
+  /* Section cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card:nth-child(1)  { animation-delay: 0.05s; }
+  .card:nth-child(2)  { animation-delay: 0.10s; }
+  .card:nth-child(3)  { animation-delay: 0.15s; }
+  .card:nth-child(4)  { animation-delay: 0.20s; }
+  .card:nth-child(5)  { animation-delay: 0.25s; }
+  .card:nth-child(6)  { animation-delay: 0.30s; }
+  .card:nth-child(7)  { animation-delay: 0.35s; }
+  .card:nth-child(8)  { animation-delay: 0.40s; }
+  .card:nth-child(9)  { animation-delay: 0.45s; }
+  .card:nth-child(10) { animation-delay: 0.50s; }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .card-icon {
+    font-size: 16px;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .card-title.green  { color: var(--accent); }
+  .card-title.yellow { color: var(--accent2); }
+  .card-title.red    { color: var(--accent3); }
+  .card-title.blue   { color: var(--accent4); }
+
+  .card-body {
+    padding: 4px 0 12px;
+  }
+
+  /* Code block */
+  .block {
+    padding: 10px 20px;
+    border-bottom: 1px solid rgba(37,42,58,0.6);
+  }
+  .block:last-child { border-bottom: none; }
+
+  .block-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    padding-top: 4px;
+  }
+
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre;
+    overflow-x: auto;
+    tab-size: 4;
+  }
+
+  /* Syntax highlighting */
+  .kw  { color: var(--keyword); font-weight: 600; }
+  .st  { color: var(--string); }
+  .cm  { color: var(--comment); font-style: italic; }
+  .fn  { color: var(--func); }
+  .nm  { color: var(--number); }
+  .op  { color: #8892b0; }
+  .var { color: var(--text); }
+  .out { color: #4a5578; }
+
+  /* Result lines */
+  .result {
+    display: block;
+    color: var(--comment);
+    padding-left: 2px;
+  }
+
+  /* Wide card spanning 2 cols */
+  .card.wide {
+    grid-column: span 2;
+  }
+
+  .wide .grid-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .wide .col-divider {
+    border-right: 1px solid var(--border);
+  }
+
+  /* Table inside card */
+  .ref-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .ref-table tr {
+    border-bottom: 1px solid rgba(37,42,58,0.6);
+  }
+  .ref-table tr:last-child { border-bottom: none; }
+
+  .ref-table td {
+    padding: 8px 20px;
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  .ref-table td:first-child {
+    color: var(--func);
+    white-space: nowrap;
+    width: 42%;
+  }
+  .ref-table td:last-child {
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    margin-top: 60px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--comment);
+    letter-spacing: 1px;
+  }
+
+  @media (max-width: 860px) {
+    .card.wide { grid-column: span 1; }
+    .wide .grid-inner { grid-template-columns: 1fr; }
+    .wide .col-divider { border-right: none; border-bottom: 1px solid var(--border); }
+    header { padding: 40px 24px 36px; }
+  }
+
+  @media (max-width: 480px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-tag">// reference guide</div>
+  <h1>Python <span>Data</span><br>Manipulation</h1>
+  <p class="subtitle">Strings, lists, dicts, type checks, conversions, and more — all in one place.</p>
+  <div class="pills">
+    <div class="pill">strings</div>
+    <div class="pill">lists</div>
+    <div class="pill">dicts</div>
+    <div class="pill">type checks</div>
+    <div class="pill">conversions</div>
+    <div class="pill">regex</div>
+    <div class="pill">formatting</div>
+    <div class="pill">sorting</div>
+  </div>
+</header>
+
+<div class="container">
+<div class="grid">
+
+
+<!-- ── STRINGS ── -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-icon">🔤</div>
+    <div class="card-title green">String Basics</div>
+  </div>
+  <div class="card-body">
+    <div class="block">
+      <div class="block-label">Create & concat</div>
+      <pre><span class="var">s</span> <span class="op">=</span> <span class="st">"Hello, World!"</span>
+<span class="var">s2</span> <span class="op">=</span> <span class="st">'single quotes'</span>
+<span class="var">multi</span> <span class="op">=</span> <span class="st">"""multi
+line"""</span>
+<span class="var">joined</span> <span class="op">=</span> <span class="st">"Hello"</span> <span class="op">+</span> <span class="st">" World"</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">Slicing & indexing</div>
+      <pre><span class="var">s</span> <span class="op">=</span> <span class="st">"Python"</span>
+<span class="var">s</span><span class="op">[</span><span class="nm">0</span><span class="op">]</span>       <span class="cm"># 'P'</span>
+<span class="var">s</span><span class="op">[-</span><span class="nm">1</span><span class="op">]</span>      <span class="cm"># 'n'</span>
+<span class="var">s</span><span class="op">[</span><span class="nm">1</span><span class="op">:</span><span class="nm">4</span><span class="op">]</span>    <span class="cm"># 'yth'</span>
+<span class="var">s</span><span class="op">[::-</span><span class="nm">1</span><span class="op">]</span>   <span class="cm"># 'nohtyP' (reversed)</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">F-strings (Python 3.6+)</div>
+      <pre><span class="var">name</span> <span class="op">=</span> <span class="st">"Alice"</span>
+<span class="var">age</span>  <span class="op">=</span> <span class="nm">30</span>
+<span class="fn">print</span><span class="op">(</span><span class="kw">f</span><span class="st">"</span><span class="kw">{</span><span class="var">name</span><span class="kw">}</span><span class="st"> is </span><span class="kw">{</span><span class="var">age</span><span class="kw">}</span><span class="st"> years old"</span><span class="op">)</span>
+<span class="fn">print</span><span class="op">(</span><span class="kw">f</span><span class="st">"Pi = </span><span class="kw">{</span><span class="nm">3.14159</span><span class="op">:.2f</span><span class="kw">}</span><span class="st">"</span><span class="op">)</span>  <span class="cm"># Pi = 3.14</span></pre>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── STRING METHODS ── -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-icon">⚙️</div>
+    <div class="card-title green">String Methods</div>
+  </div>
+  <div class="card-body">
+    <div class="block">
+      <div class="block-label">Case & whitespace</div>
+      <pre><span class="var">s</span> <span class="op">=</span> <span class="st">"  Hello World  "</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">upper</span><span class="op">()</span>        <span class="cm"># "  HELLO WORLD  "</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">lower</span><span class="op">()</span>        <span class="cm"># "  hello world  "</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">title</span><span class="op">()</span>        <span class="cm"># "  Hello World  "</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">strip</span><span class="op">()</span>        <span class="cm"># "Hello World"</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">lstrip</span><span class="op">()</span>       <span class="cm"># "Hello World  "</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">rstrip</span><span class="op">()</span>       <span class="cm"># "  Hello World"</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">Search & replace</div>
+      <pre><span class="var">s</span> <span class="op">=</span> <span class="st">"banana"</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">find</span><span class="op">(</span><span class="st">"an"</span><span class="op">)</span>      <span class="cm"># 1  (first occurrence)</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">count</span><span class="op">(</span><span class="st">"a"</span><span class="op">)</span>     <span class="cm"># 3</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">replace</span><span class="op">(</span><span class="st">"a"</span><span class="op">,</span> <span class="st">"o"</span><span class="op">)</span>   <span class="cm"># "bonono"</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">startswith</span><span class="op">(</span><span class="st">"ban"</span><span class="op">)</span> <span class="cm"># True</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">endswith</span><span class="op">(</span><span class="st">"na"</span><span class="op">)</span>   <span class="cm"># True</span>
+<span class="st">"an"</span> <span class="kw">in</span> <span class="var">s</span>         <span class="cm"># True</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">Padding & align</div>
+      <pre><span class="st">"42"</span><span class="op">.</span><span class="fn">zfill</span><span class="op">(</span><span class="nm">5</span><span class="op">)</span>       <span class="cm"># "00042"</span>
+<span class="st">"hi"</span><span class="op">.</span><span class="fn">center</span><span class="op">(</span><span class="nm">10</span><span class="op">,</span> <span class="st">"-"</span><span class="op">)</span>  <span class="cm"># "----hi----"</span>
+<span class="st">"hi"</span><span class="op">.</span><span class="fn">ljust</span><span class="op">(</span><span class="nm">10</span><span class="op">,</span> <span class="st">"."</span><span class="op">)</span>   <span class="cm"># "hi........"</span>
+<span class="st">"hi"</span><span class="op">.</span><span class="fn">rjust</span><span class="op">(</span><span class="nm">10</span><span class="op">,</span> <span class="st">"."</span><span class="op">)</span>   <span class="cm"># "........hi"</span></pre>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── SPLIT & JOIN ── -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-icon">✂️</div>
+    <div class="card-title yellow">Split & Join</div>
+  </div>
+  <div class="card-body">
+    <div class="block">
+      <div class="block-label">split()</div>
+      <pre><span class="var">s</span> <span class="op">=</span> <span class="st">"one,two,three"</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="st">","</span><span class="op">)</span>       <span class="cm"># ['one','two','three']</span>
+<span class="var">s</span><span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="st">","</span><span class="op">,</span> <span class="nm">1</span><span class="op">)</span>    <span class="cm"># ['one','two,three']</span>
+
+<span class="st">"  a  b  c  "</span><span class="op">.</span><span class="fn">split</span><span class="op">()</span> <span class="cm"># ['a','b','c']</span>
+
+<span class="cm"># splitlines — split on newlines</span>
+<span class="st">"a\nb\nc"</span><span class="op">.</span><span class="fn">splitlines</span><span class="op">()</span>  <span class="cm"># ['a','b','c']</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">join()</div>
+      <pre><span class="var">words</span> <span class="op">=</span> <span class="op">[</span><span class="st">"Hello"</span><span class="op">,</span> <span class="st">"World"</span><span class="op">]</span>
+<span class="st">" "</span><span class="op">.</span><span class="fn">join</span><span class="op">(</span><span class="var">words</span><span class="op">)</span>     <span class="cm"># "Hello World"</span>
+<span class="st">"-"</span><span class="op">.</span><span class="fn">join</span><span class="op">(</span><span class="var">words</span><span class="op">)</span>     <span class="cm"># "Hello-World"</span>
+<span class="st">""</span><span class="op">.</span><span class="fn">join</span><span class="op">(</span><span class="var">words</span><span class="op">)</span>      <span class="cm"># "HelloWorld"</span>
+
+<span class="cm"># join + split round-trip</span>
+<span class="var">csv</span> <span class="op">=</span> <span class="st">","</span><span class="op">.</span><span class="fn">join</span><span class="op">([</span><span class="st">"a"</span><span class="op">,</span><span class="st">"b"</span><span class="op">,</span><span class="st">"c"</span><span class="op">])</span>  <span class="cm"># "a,b,c"</span>
+<span class="var">csv</span><span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="st">","</span><span class="op">)</span>            <span class="cm"># ['a','b','c']</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">partition()</div>
+      <pre><span class="st">"user@example.com"</span><span class="op">.</span><span class="fn">partition</span><span class="op">(</span><span class="st">"@"</span><span class="op">)</span>
+<span class="cm"># ('user', '@', 'example.com')</span>
+<span class="st">"key=value"</span><span class="op">.</span><span class="fn">partition</span><span class="op">(</span><span class="st">"="</span><span class="op">)</span>
+<span class="cm"># ('key', '=', 'value')</span></pre>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── TYPE CHECKS ── -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-icon">🔍</div>
+    <div class="card-title blue">Type Checks</div>
+  </div>
+  <div class="card-body">
+    <div class="block">
+      <div class="block-label">isinstance & type</div>
+      <pre><span class="fn">isinstance</span><span class="op">(</span><span class="nm">42</span><span class="op">,</span> <span class="kw">int</span><span class="op">)</span>          <span class="cm"># True</span>
+<span class="fn">isinstance</span><span class="op">(</span><span class="nm">3.14</span><span class="op">,</span> <span class="kw">float</span><span class="op">)</span>      <span class="cm"># True</span>
+<span class="fn">isinstance</span><span class="op">(</span><span class="st">"hi"</span><span class="op">,</span> <span class="kw">str</span><span class="op">)</span>        <span class="cm"># True</span>
+<span class="fn">isinstance</span><span class="op">(</span><span class="op">[]</span><span class="op">,</span> <span class="kw">list</span><span class="op">)</span>         <span class="cm"># True</span>
+<span class="fn">isinstance</span><span class="op">(</span><span class="op">{}</span><span class="op">,</span> <span class="kw">dict</span><span class="op">)</span>         <span class="cm"># True</span>
+<span class="fn">isinstance</span><span class="op">(</span><span class="nm">42</span><span class="op">,</span> <span class="op">(</span><span class="kw">int</span><span class="op">,</span> <span class="kw">float</span><span class="op">))</span>  <span class="cm"># True (either)</span>
+<span class="fn">type</span><span class="op">(</span><span class="nm">42</span><span class="op">)</span> <span class="kw">is</span> <span class="kw">int</span>              <span class="cm"># True</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">String character checks</div>
+      <pre><span class="st">"abc123"</span><span class="op">.</span><span class="fn">isalnum</span><span class="op">()</span>   <span class="cm"># True  — letters+digits</span>
+<span class="st">"abc"</span><span class="op">.</span><span class="fn">isalpha</span><span class="op">()</span>      <span class="cm"># True  — letters only</span>
+<span class="st">"123"</span><span class="op">.</span><span class="fn">isdigit</span><span class="op">()</span>      <span class="cm"># True  — digits only</span>
+<span class="st">"123"</span><span class="op">.</span><span class="fn">isnumeric</span><span class="op">()</span>    <span class="cm"># True  — numeric chars</span>
+<span class="st">"  "</span><span class="op">.</span><span class="fn">isspace</span><span class="op">()</span>       <span class="cm"># True  — whitespace</span>
+<span class="st">"Hello"</span><span class="op">.</span><span class="fn">istitle</span><span class="op">()</span>    <span class="cm"># True  — title case</span>
+<span class="st">"ABC"</span><span class="op">.</span><span class="fn">isupper</span><span class="op">()</span>      <span class="cm"># True</span>
+<span class="st">"abc"</span><span class="op">.</span><span class="fn">islower</span><span class="op">()</span>      <span class="cm"># True</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">Safe number parsing</div>
+      <pre><span class="kw">def</span> <span class="fn">is_number</span><span class="op">(</span><span class="var">s</span><span class="op">):</span>
+    <span class="kw">try</span><span class="op">:</span>
+        <span class="fn">float</span><span class="op">(</span><span class="var">s</span><span class="op">)</span>
+        <span class="kw">return</span> <span class="kw">True</span>
+    <span class="kw">except</span> <span class="kw">ValueError</span><span class="op">:</span>
+        <span class="kw">return</span> <span class="kw">False</span>
+
+<span class="fn">is_number</span><span class="op">(</span><span class="st">"3.14"</span><span class="op">)</span>   <span class="cm"># True</span>
+<span class="fn">is_number</span><span class="op">(</span><span class="st">"abc"</span><span class="op">)</span>    <span class="cm"># False</span></pre>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── LISTS ── -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-icon">📋</div>
+    <div class="card-title yellow">Lists</div>
+  </div>
+  <div class="card-body">
+    <div class="block">
+      <div class="block-label">Create & mutate</div>
+      <pre><span class="var">lst</span> <span class="op">=</span> <span class="op">[</span><span class="nm">3</span><span class="op">,</span> <span class="nm">1</span><span class="op">,</span> <span class="nm">4</span><span class="op">,</span> <span class="nm">1</span><span class="op">,</span> <span class="nm">5</span><span class="op">]</span>
+<span class="var">lst</span><span class="op">.</span><span class="fn">append</span><span class="op">(</span><span class="nm">9</span><span class="op">)</span>         <span class="cm"># [3,1,4,1,5,9]</span>
+<span class="var">lst</span><span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="nm">0</span><span class="op">,</span> <span class="nm">99</span><span class="op">)</span>      <span class="cm"># [99,3,1,4,1,5,9]</span>
+<span class="var">lst</span><span class="op">.</span><span class="fn">extend</span><span class="op">([</span><span class="nm">7</span><span class="op">,</span> <span class="nm">8</span><span class="op">])</span>     <span class="cm"># adds [7,8] to end</span>
+<span class="var">lst</span><span class="op">.</span><span class="fn">remove</span><span class="op">(</span><span class="nm">1</span><span class="op">)</span>         <span class="cm"># removes first 1</span>
+<span class="var">lst</span><span class="op">.</span><span class="fn">pop</span><span class="op">()</span>             <span class="cm"># removes & returns last</span>
+<span class="var">lst</span><span class="op">.</span><span class="fn">pop</span><span class="op">(</span><span class="nm">0</span><span class="op">)</span>            <span class="cm"># removes & returns first</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">Search & sort</div>
+      <pre><span class="var">lst</span> <span class="op">=</span> <span class="op">[</span><span class="nm">3</span><span class="op">,</span> <span class="nm">1</span><span class="op">,</span> <span class="nm">4</span><span class="op">,</span> <span class="nm">2</span><span class="op">]</span>
+<span class="var">lst</span><span class="op">.</span><span class="fn">index</span><span class="op">(</span><span class="nm">4</span><span class="op">)</span>    <span class="cm"># 2  (position of 4)</span>
+<span class="var">lst</span><span class="op">.</span><span class="fn">count</span><span class="op">(</span><span class="nm">1</span><span class="op">)</span>    <span class="cm"># 1  (how many 1s)</span>
+<span class="nm">4</span> <span class="kw">in</span> <span class="var">lst</span>       <span class="cm"># True</span>
+<span class="var">lst</span><span class="op">.</span><span class="fn">sort</span><span class="op">()</span>     <span class="cm"># [1,2,3,4] in-place</span>
+<span class="var">lst</span><span class="op">.</span><span class="fn">reverse</span><span class="op">()</span>  <span class="cm"># [4,3,2,1] in-place</span>
+<span class="fn">sorted</span><span class="op">(</span><span class="var">lst</span><span class="op">)</span>    <span class="cm"># returns new sorted list</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">List comprehensions</div>
+      <pre><span class="var">squares</span> <span class="op">=</span> <span class="op">[</span><span class="var">x</span><span class="op">**</span><span class="nm">2</span> <span class="kw">for</span> <span class="var">x</span> <span class="kw">in</span> <span class="fn">range</span><span class="op">(</span><span class="nm">5</span><span class="op">)]</span>
+<span class="cm"># [0, 1, 4, 9, 16]</span>
+
+<span class="var">evens</span> <span class="op">=</span> <span class="op">[</span><span class="var">x</span> <span class="kw">for</span> <span class="var">x</span> <span class="kw">in</span> <span class="fn">range</span><span class="op">(</span><span class="nm">10</span><span class="op">)</span> <span class="kw">if</span> <span class="var">x</span> <span class="op">%</span> <span class="nm">2</span> <span class="op">==</span> <span class="nm">0</span><span class="op">]</span>
+<span class="cm"># [0, 2, 4, 6, 8]</span>
+
+<span class="var">flat</span> <span class="op">=</span> <span class="op">[</span><span class="var">x</span> <span class="kw">for</span> <span class="var">row</span> <span class="kw">in</span> <span class="op">[[</span><span class="nm">1</span><span class="op">,</span><span class="nm">2</span><span class="op">],[</span><span class="nm">3</span><span class="op">,</span><span class="nm">4</span><span class="op">]]</span> <span class="kw">for</span> <span class="var">x</span> <span class="kw">in</span> <span class="var">row</span><span class="op">]</span>
+<span class="cm"># [1, 2, 3, 4]</span></pre>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── DICTIONARIES ── -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-icon">📦</div>
+    <div class="card-title blue">Dictionaries</div>
+  </div>
+  <div class="card-body">
+    <div class="block">
+      <div class="block-label">Create & access</div>
+      <pre><span class="var">d</span> <span class="op">=</span> <span class="op">{</span><span class="st">"name"</span><span class="op">:</span> <span class="st">"Alice"</span><span class="op">,</span> <span class="st">"age"</span><span class="op">:</span> <span class="nm">30</span><span class="op">}</span>
+<span class="var">d</span><span class="op">[</span><span class="st">"name"</span><span class="op">]</span>              <span class="cm"># "Alice"</span>
+<span class="var">d</span><span class="op">.</span><span class="fn">get</span><span class="op">(</span><span class="st">"age"</span><span class="op">)</span>           <span class="cm"># 30</span>
+<span class="var">d</span><span class="op">.</span><span class="fn">get</span><span class="op">(</span><span class="st">"city"</span><span class="op">,</span> <span class="st">"N/A"</span><span class="op">)</span>   <span class="cm"># "N/A" (default)</span>
+<span class="var">d</span><span class="op">[</span><span class="st">"email"</span><span class="op">]</span> <span class="op">=</span> <span class="st">"a@x.com"</span>  <span class="cm"># add/update key</span>
+<span class="kw">del</span> <span class="var">d</span><span class="op">[</span><span class="st">"age"</span><span class="op">]</span>           <span class="cm"># delete key</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">Iterate & views</div>
+      <pre><span class="var">d</span><span class="op">.</span><span class="fn">keys</span><span class="op">()</span>    <span class="cm"># dict_keys(['name','email'])</span>
+<span class="var">d</span><span class="op">.</span><span class="fn">values</span><span class="op">()</span>  <span class="cm"># dict_values(['Alice','a@x.com'])</span>
+<span class="var">d</span><span class="op">.</span><span class="fn">items</span><span class="op">()</span>   <span class="cm"># dict_items([('name','Alice')…])</span>
+
+<span class="kw">for</span> <span class="var">k</span><span class="op">,</span> <span class="var">v</span> <span class="kw">in</span> <span class="var">d</span><span class="op">.</span><span class="fn">items</span><span class="op">():</span>
+    <span class="fn">print</span><span class="op">(</span><span class="kw">f</span><span class="st">"</span><span class="kw">{</span><span class="var">k</span><span class="kw">}</span><span class="st">: </span><span class="kw">{</span><span class="var">v</span><span class="kw">}</span><span class="st">"</span><span class="op">)</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">Dict comprehension & merge</div>
+      <pre><span class="var">sq</span> <span class="op">=</span> <span class="op">{</span><span class="var">x</span><span class="op">:</span> <span class="var">x</span><span class="op">**</span><span class="nm">2</span> <span class="kw">for</span> <span class="var">x</span> <span class="kw">in</span> <span class="fn">range</span><span class="op">(</span><span class="nm">4</span><span class="op">)}</span>
+<span class="cm"># {0:0, 1:1, 2:4, 3:9}</span>
+
+<span class="cm"># merge (Python 3.9+)</span>
+<span class="var">merged</span> <span class="op">=</span> <span class="op">{</span><span class="st">"a"</span><span class="op">:</span> <span class="nm">1</span><span class="op">}</span> <span class="op">|</span> <span class="op">{</span><span class="st">"b"</span><span class="op">:</span> <span class="nm">2</span><span class="op">}</span>
+<span class="cm"># {'a': 1, 'b': 2}</span>
+
+<span class="cm"># merge (older style)</span>
+<span class="var">merged</span> <span class="op">=</span> <span class="op">{**</span><span class="var">d1</span><span class="op">,</span> <span class="op">**</span><span class="var">d2</span><span class="op">}</span></pre>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── TYPE CONVERSION ── -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-icon">🔄</div>
+    <div class="card-title red">Type Conversion</div>
+  </div>
+  <div class="card-body">
+    <div class="block">
+      <div class="block-label">Numeric conversions</div>
+      <pre><span class="fn">int</span><span class="op">(</span><span class="st">"42"</span><span class="op">)</span>          <span class="cm"># 42</span>
+<span class="fn">int</span><span class="op">(</span><span class="nm">3.99</span><span class="op">)</span>         <span class="cm"># 3   (truncates!)</span>
+<span class="fn">float</span><span class="op">(</span><span class="st">"3.14"</span><span class="op">)</span>      <span class="cm"># 3.14</span>
+<span class="fn">float</span><span class="op">(</span><span class="nm">42</span><span class="op">)</span>          <span class="cm"># 42.0</span>
+<span class="fn">int</span><span class="op">(</span><span class="st">"FF"</span><span class="op">,</span> <span class="nm">16</span><span class="op">)</span>      <span class="cm"># 255  (hex)</span>
+<span class="fn">int</span><span class="op">(</span><span class="st">"1010"</span><span class="op">,</span> <span class="nm">2</span><span class="op">)</span>    <span class="cm"># 10   (binary)</span>
+<span class="fn">round</span><span class="op">(</span><span class="nm">3.14159</span><span class="op">,</span> <span class="nm">2</span><span class="op">)</span> <span class="cm"># 3.14</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">String ↔ collection</div>
+      <pre><span class="fn">list</span><span class="op">(</span><span class="st">"abc"</span><span class="op">)</span>         <span class="cm"># ['a','b','c']</span>
+<span class="fn">tuple</span><span class="op">([</span><span class="nm">1</span><span class="op">,</span><span class="nm">2</span><span class="op">,</span><span class="nm">3</span><span class="op">])</span>      <span class="cm"># (1, 2, 3)</span>
+<span class="fn">set</span><span class="op">([</span><span class="nm">1</span><span class="op">,</span><span class="nm">2</span><span class="op">,</span><span class="nm">2</span><span class="op">,</span><span class="nm">3</span><span class="op">])</span>     <span class="cm"># {1, 2, 3}</span>
+<span class="fn">str</span><span class="op">(</span><span class="nm">42</span><span class="op">)</span>             <span class="cm"># "42"</span>
+<span class="fn">str</span><span class="op">([</span><span class="nm">1</span><span class="op">,</span><span class="nm">2</span><span class="op">,</span><span class="nm">3</span><span class="op">])</span>       <span class="cm"># "[1, 2, 3]"</span>
+<span class="fn">bool</span><span class="op">(</span><span class="nm">0</span><span class="op">)</span>             <span class="cm"># False</span>
+<span class="fn">bool</span><span class="op">(</span><span class="st">""</span><span class="op">)</span>            <span class="cm"># False</span>
+<span class="fn">bool</span><span class="op">(</span><span class="op">[]</span><span class="op">)</span>            <span class="cm"># False</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">Number bases</div>
+      <pre><span class="fn">bin</span><span class="op">(</span><span class="nm">10</span><span class="op">)</span>    <span class="cm"># '0b1010'</span>
+<span class="fn">oct</span><span class="op">(</span><span class="nm">10</span><span class="op">)</span>    <span class="cm"># '0o12'</span>
+<span class="fn">hex</span><span class="op">(</span><span class="nm">255</span><span class="op">)</span>   <span class="cm"># '0xff'</span>
+<span class="fn">ord</span><span class="op">(</span><span class="st">'A'</span><span class="op">)</span>   <span class="cm"># 65  (char → int)</span>
+<span class="fn">chr</span><span class="op">(</span><span class="nm">65</span><span class="op">)</span>    <span class="cm"># 'A' (int → char)</span></pre>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── REGEX ── -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-icon">🔎</div>
+    <div class="card-title red">Regular Expressions</div>
+  </div>
+  <div class="card-body">
+    <div class="block">
+      <div class="block-label">Search & match</div>
+      <pre><span class="kw">import</span> <span class="var">re</span>
+
+<span class="var">re</span><span class="op">.</span><span class="fn">search</span><span class="op">(</span><span class="st">r"\d+"</span><span class="op">,</span> <span class="st">"abc123"</span><span class="op">)</span>   <span class="cm"># match</span>
+<span class="var">re</span><span class="op">.</span><span class="fn">match</span><span class="op">(</span><span class="st">r"\d+"</span><span class="op">,</span> <span class="st">"123abc"</span><span class="op">)</span>    <span class="cm"># start only</span>
+<span class="var">re</span><span class="op">.</span><span class="fn">fullmatch</span><span class="op">(</span><span class="st">r"\d+"</span><span class="op">,</span> <span class="st">"123"</span><span class="op">)</span>  <span class="cm"># whole str</span>
+<span class="var">re</span><span class="op">.</span><span class="fn">findall</span><span class="op">(</span><span class="st">r"\d+"</span><span class="op">,</span> <span class="st">"a1b22"</span><span class="op">)</span>  <span class="cm"># ['1','22']</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">Sub & split</div>
+      <pre><span class="var">re</span><span class="op">.</span><span class="fn">sub</span><span class="op">(</span><span class="st">r"\s+"</span><span class="op">,</span> <span class="st">"-"</span><span class="op">,</span> <span class="st">"a b  c"</span><span class="op">)</span>
+<span class="cm"># "a-b-c"</span>
+
+<span class="var">re</span><span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="st">r"[,;]"</span><span class="op">,</span> <span class="st">"a,b;c"</span><span class="op">)</span>
+<span class="cm"># ['a', 'b', 'c']</span>
+
+<span class="cm"># Compile for reuse</span>
+<span class="var">pat</span> <span class="op">=</span> <span class="var">re</span><span class="op">.</span><span class="fn">compile</span><span class="op">(</span><span class="st">r"[A-Z]\w+"</span><span class="op">)</span>
+<span class="var">pat</span><span class="op">.</span><span class="fn">findall</span><span class="op">(</span><span class="st">"Hello World"</span><span class="op">)</span>
+<span class="cm"># ['Hello', 'World']</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">Common patterns</div>
+      <pre><span class="cm"># email validation</span>
+<span class="var">pat</span> <span class="op">=</span> <span class="st">r"[\w.-]+@[\w.-]+\.\w{2,}"</span>
+
+<span class="cm"># digits only</span>
+<span class="var">pat</span> <span class="op">=</span> <span class="st">r"^\d+$"</span>
+
+<span class="cm"># URL</span>
+<span class="var">pat</span> <span class="op">=</span> <span class="st">r"https?://[^\s]+"</span>
+
+<span class="cm"># strip HTML tags</span>
+<span class="var">re</span><span class="op">.</span><span class="fn">sub</span><span class="op">(</span><span class="st">r"<[^>]+>"</span><span class="op">,</span> <span class="st">""</span><span class="op">,</span> <span class="st">"&lt;b&gt;bold&lt;/b&gt;"</span><span class="op">)</span></pre>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── SORTING ── -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-icon">🔀</div>
+    <div class="card-title green">Sorting & Ordering</div>
+  </div>
+  <div class="card-body">
+    <div class="block">
+      <div class="block-label">sorted() & sort()</div>
+      <pre><span class="var">nums</span> <span class="op">=</span> <span class="op">[</span><span class="nm">3</span><span class="op">,</span> <span class="nm">1</span><span class="op">,</span> <span class="nm">4</span><span class="op">,</span> <span class="nm">1</span><span class="op">,</span> <span class="nm">5</span><span class="op">]</span>
+<span class="fn">sorted</span><span class="op">(</span><span class="var">nums</span><span class="op">)</span>               <span class="cm"># [1,1,3,4,5]</span>
+<span class="fn">sorted</span><span class="op">(</span><span class="var">nums</span><span class="op">,</span> <span class="var">reverse</span><span class="op">=</span><span class="kw">True</span><span class="op">)</span> <span class="cm"># [5,4,3,1,1]</span>
+
+<span class="var">words</span> <span class="op">=</span> <span class="op">[</span><span class="st">"banana"</span><span class="op">,</span> <span class="st">"apple"</span><span class="op">,</span> <span class="st">"fig"</span><span class="op">]</span>
+<span class="fn">sorted</span><span class="op">(</span><span class="var">words</span><span class="op">)</span>               <span class="cm"># alpha</span>
+<span class="fn">sorted</span><span class="op">(</span><span class="var">words</span><span class="op">,</span> <span class="var">key</span><span class="op">=</span><span class="kw">len</span><span class="op">)</span>     <span class="cm"># by length</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">key= functions</div>
+      <pre><span class="var">people</span> <span class="op">=</span> <span class="op">[</span>
+    <span class="op">{</span><span class="st">"name"</span><span class="op">:</span> <span class="st">"Bob"</span><span class="op">,</span>   <span class="st">"age"</span><span class="op">:</span> <span class="nm">30</span><span class="op">},</span>
+    <span class="op">{</span><span class="st">"name"</span><span class="op">:</span> <span class="st">"Alice"</span><span class="op">,</span> <span class="st">"age"</span><span class="op">:</span> <span class="nm">25</span><span class="op">},</span>
+<span class="op">]</span>
+<span class="fn">sorted</span><span class="op">(</span><span class="var">people</span><span class="op">,</span> <span class="var">key</span><span class="op">=</span><span class="kw">lambda</span> <span class="var">x</span><span class="op">:</span> <span class="var">x</span><span class="op">[</span><span class="st">"age"</span><span class="op">])</span>
+
+<span class="kw">from</span> <span class="var">operator</span> <span class="kw">import</span> <span class="fn">itemgetter</span>
+<span class="fn">sorted</span><span class="op">(</span><span class="var">people</span><span class="op">,</span> <span class="var">key</span><span class="op">=</span><span class="fn">itemgetter</span><span class="op">(</span><span class="st">"name"</span><span class="op">))</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">min / max / sum</div>
+      <pre><span class="var">data</span> <span class="op">=</span> <span class="op">[</span><span class="nm">3</span><span class="op">,</span> <span class="nm">1</span><span class="op">,</span> <span class="nm">4</span><span class="op">,</span> <span class="nm">1</span><span class="op">,</span> <span class="nm">5</span><span class="op">]</span>
+<span class="fn">min</span><span class="op">(</span><span class="var">data</span><span class="op">)</span>   <span class="cm"># 1</span>
+<span class="fn">max</span><span class="op">(</span><span class="var">data</span><span class="op">)</span>   <span class="cm"># 5</span>
+<span class="fn">sum</span><span class="op">(</span><span class="var">data</span><span class="op">)</span>   <span class="cm"># 14</span>
+<span class="fn">sum</span><span class="op">(</span><span class="var">data</span><span class="op">)</span> <span class="op">/</span> <span class="fn">len</span><span class="op">(</span><span class="var">data</span><span class="op">)</span>  <span class="cm"># 2.8 (avg)</span></pre>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── USEFUL BUILTINS ── -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-icon">⚡</div>
+    <div class="card-title yellow">Useful Builtins</div>
+  </div>
+  <div class="card-body">
+    <div class="block">
+      <div class="block-label">enumerate & zip</div>
+      <pre><span class="var">fruits</span> <span class="op">=</span> <span class="op">[</span><span class="st">"apple"</span><span class="op">,</span> <span class="st">"banana"</span><span class="op">]</span>
+<span class="kw">for</span> <span class="var">i</span><span class="op">,</span> <span class="var">v</span> <span class="kw">in</span> <span class="fn">enumerate</span><span class="op">(</span><span class="var">fruits</span><span class="op">):</span>
+    <span class="fn">print</span><span class="op">(</span><span class="var">i</span><span class="op">,</span> <span class="var">v</span><span class="op">)</span>   <span class="cm"># 0 apple  1 banana</span>
+
+<span class="var">names</span>  <span class="op">=</span> <span class="op">[</span><span class="st">"Alice"</span><span class="op">,</span> <span class="st">"Bob"</span><span class="op">]</span>
+<span class="var">scores</span> <span class="op">=</span> <span class="op">[</span><span class="nm">95</span><span class="op">,</span> <span class="nm">82</span><span class="op">]</span>
+<span class="kw">for</span> <span class="var">n</span><span class="op">,</span> <span class="var">s</span> <span class="kw">in</span> <span class="fn">zip</span><span class="op">(</span><span class="var">names</span><span class="op">,</span> <span class="var">scores</span><span class="op">):</span>
+    <span class="fn">print</span><span class="op">(</span><span class="kw">f</span><span class="st">"</span><span class="kw">{</span><span class="var">n</span><span class="kw">}</span><span class="st">: </span><span class="kw">{</span><span class="var">s</span><span class="kw">}</span><span class="st">"</span><span class="op">)</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">map & filter</div>
+      <pre><span class="var">nums</span> <span class="op">=</span> <span class="op">[</span><span class="nm">1</span><span class="op">,</span> <span class="nm">2</span><span class="op">,</span> <span class="nm">3</span><span class="op">,</span> <span class="nm">4</span><span class="op">]</span>
+<span class="fn">list</span><span class="op">(</span><span class="fn">map</span><span class="op">(</span><span class="kw">str</span><span class="op">,</span> <span class="var">nums</span><span class="op">))</span>
+<span class="cm"># ['1','2','3','4']</span>
+
+<span class="fn">list</span><span class="op">(</span><span class="fn">filter</span><span class="op">(</span><span class="kw">lambda</span> <span class="var">x</span><span class="op">:</span> <span class="var">x</span> <span class="op">></span> <span class="nm">2</span><span class="op">,</span> <span class="var">nums</span><span class="op">))</span>
+<span class="cm"># [3, 4]</span>
+
+<span class="cm"># any / all</span>
+<span class="fn">any</span><span class="op">(</span><span class="var">x</span> <span class="op">></span> <span class="nm">3</span> <span class="kw">for</span> <span class="var">x</span> <span class="kw">in</span> <span class="var">nums</span><span class="op">)</span>  <span class="cm"># True</span>
+<span class="fn">all</span><span class="op">(</span><span class="var">x</span> <span class="op">></span> <span class="nm">0</span> <span class="kw">for</span> <span class="var">x</span> <span class="kw">in</span> <span class="var">nums</span><span class="op">)</span>  <span class="cm"># True</span></pre>
+    </div>
+    <div class="block">
+      <div class="block-label">Counter & defaultdict</div>
+      <pre><span class="kw">from</span> <span class="var">collections</span> <span class="kw">import</span> <span class="fn">Counter</span><span class="op">,</span> <span class="fn">defaultdict</span>
+
+<span class="fn">Counter</span><span class="op">(</span><span class="st">"banana"</span><span class="op">)</span>
+<span class="cm"># Counter({'a':3,'n':2,'b':1})</span>
+
+<span class="var">dd</span> <span class="op">=</span> <span class="fn">defaultdict</span><span class="op">(</span><span class="kw">list</span><span class="op">)</span>
+<span class="var">dd</span><span class="op">[</span><span class="st">"x"</span><span class="op">].</span><span class="fn">append</span><span class="op">(</span><span class="nm">1</span><span class="op">)</span>    <span class="cm"># no KeyError</span></pre>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── WIDE: STRING METHODS REFERENCE ── -->
+<div class="card wide">
+  <div class="card-header">
+    <div class="card-icon">📖</div>
+    <div class="card-title blue">Quick Reference — All String Methods</div>
+  </div>
+  <div class="card-body">
+    <div class="grid-inner">
+      <div class="col-divider">
+        <table class="ref-table">
+          <tr><td>.upper() / .lower()</td><td>Change case</td></tr>
+          <tr><td>.title() / .capitalize()</td><td>Title / first-letter case</td></tr>
+          <tr><td>.strip() / .lstrip() / .rstrip()</td><td>Remove whitespace</td></tr>
+          <tr><td>.split(sep, maxsplit)</td><td>Split into list</td></tr>
+          <tr><td>.splitlines()</td><td>Split on newlines</td></tr>
+          <tr><td>sep.join(iterable)</td><td>Join list → string</td></tr>
+          <tr><td>.replace(old, new, count)</td><td>Replace substrings</td></tr>
+          <tr><td>.find(sub) / .rfind(sub)</td><td>Index of substring (−1 if not found)</td></tr>
+          <tr><td>.index(sub)</td><td>Like find but raises ValueError</td></tr>
+          <tr><td>.count(sub)</td><td>Count non-overlapping occurrences</td></tr>
+          <tr><td>.startswith(prefix)</td><td>Boolean prefix check</td></tr>
+          <tr><td>.endswith(suffix)</td><td>Boolean suffix check</td></tr>
+        </table>
+      </div>
+      <div>
+        <table class="ref-table">
+          <tr><td>.isalpha()</td><td>All alphabetic characters</td></tr>
+          <tr><td>.isdigit()</td><td>All digit characters</td></tr>
+          <tr><td>.isnumeric()</td><td>All numeric (incl. fractions, superscripts)</td></tr>
+          <tr><td>.isalnum()</td><td>All alphanumeric</td></tr>
+          <tr><td>.isspace()</td><td>All whitespace</td></tr>
+          <tr><td>.isupper() / .islower()</td><td>All upper / lower case</td></tr>
+          <tr><td>.istitle()</td><td>Title-case string</td></tr>
+          <tr><td>.zfill(width)</td><td>Zero-pad numeric string</td></tr>
+          <tr><td>.center(w, fill)</td><td>Center in field</td></tr>
+          <tr><td>.ljust(w) / .rjust(w)</td><td>Left / right justify</td></tr>
+          <tr><td>.encode(enc)</td><td>Encode to bytes</td></tr>
+          <tr><td>.format(*args, **kw)</td><td>Old-style string formatting</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+</div><!-- /grid -->
+
+<footer style="margin-top:60px; padding-bottom:40px;">
+  <span>// python data manipulation cheat sheet &nbsp;·&nbsp; python 3.9+</span>
+</footer>
+
+</div><!-- /container -->
+</body>
+</html>

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Data Structures Cheat Sheet</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #141418;
+    --border: #222228;
+    --accent1: #ff6b35;
+    --accent2: #00d4aa;
+    --accent3: #a78bfa;
+    --accent4: #f59e0b;
+    --accent5: #38bdf8;
+    --accent6: #fb7185;
+    --text: #e8e8f0;
+    --muted: #666680;
+    --code-bg: #0a0a0d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 40px 32px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    background: linear-gradient(135deg, var(--accent1), var(--accent3), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card.wide { grid-column: span 2; }
+  .card.full { grid-column: span 3; }
+
+  .card-header {
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .card-header .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .card-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .card-header .tag {
+    margin-left: auto;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    letter-spacing: 1px;
+    opacity: 0.7;
+  }
+
+  .card-body {
+    padding: 16px 18px;
+    flex: 1;
+  }
+
+  .section-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin: 14px 0 6px;
+  }
+
+  .section-label:first-child { margin-top: 0; }
+
+  pre {
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    border: 1px solid #1a1a20;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .kw  { color: #a78bfa; }
+  .fn  { color: #38bdf8; }
+  .st  { color: #86efac; }
+  .cm  { color: #4a4a6a; }
+  .nm  { color: #fbbf24; }
+  .cl  { color: #fb923c; }
+  .op  { color: #94a3b8; }
+
+  .c1 .dot { background: var(--accent1); }
+  .c1 .tag { background: #ff6b3522; color: var(--accent1); border: 1px solid #ff6b3544; }
+  .c1 .card-header { border-bottom-color: #ff6b3520; }
+
+  .c2 .dot { background: var(--accent2); }
+  .c2 .tag { background: #00d4aa22; color: var(--accent2); border: 1px solid #00d4aa44; }
+  .c2 .card-header { border-bottom-color: #00d4aa20; }
+
+  .c3 .dot { background: var(--accent3); }
+  .c3 .tag { background: #a78bfa22; color: var(--accent3); border: 1px solid #a78bfa44; }
+  .c3 .card-header { border-bottom-color: #a78bfa20; }
+
+  .c4 .dot { background: var(--accent4); }
+  .c4 .tag { background: #f59e0b22; color: var(--accent4); border: 1px solid #f59e0b44; }
+  .c4 .card-header { border-bottom-color: #f59e0b20; }
+
+  .c5 .dot { background: var(--accent5); }
+  .c5 .tag { background: #38bdf822; color: var(--accent5); border: 1px solid #38bdf844; }
+  .c5 .card-header { border-bottom-color: #38bdf820; }
+
+  .c6 .dot { background: var(--accent6); }
+  .c6 .tag { background: #fb718522; color: var(--accent6); border: 1px solid #fb718544; }
+  .c6 .card-header { border-bottom-color: #fb718520; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  .complexity-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    margin-top: 4px;
+  }
+
+  .complexity-table th {
+    text-align: left;
+    padding: 6px 10px;
+    color: var(--muted);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .complexity-table td {
+    padding: 5px 10px;
+    border-bottom: 1px solid #1a1a20;
+  }
+
+  .complexity-table tr:last-child td { border-bottom: none; }
+
+  .o1     { color: #4ade80; }
+  .ologn  { color: #a3e635; }
+  .on     { color: #facc15; }
+  .onlogn { color: #fb923c; }
+  .on2    { color: #f87171; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Python Data Structures</h1>
+  <p>Cheat Sheet &nbsp;·&nbsp; Common Operations &nbsp;·&nbsp; Time Complexity</p>
+</header>
+
+<div class="grid">
+
+  <!-- LIST -->
+  <div class="card c1">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>List</h2>
+      <span class="tag">ORDERED · MUTABLE</span>
+    </div>
+    <div class="card-body">
+      <div class="section-label">Init</div>
+      <pre><span class="nm">l</span> <span class="op">=</span> []
+<span class="nm">l</span> <span class="op">=</span> [<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>]
+<span class="nm">l</span> <span class="op">=</span> <span class="fn">list</span>(<span class="fn">range</span>(<span class="nm">5</span>))     <span class="cm"># [0,1,2,3,4]</span>
+<span class="nm">l</span> <span class="op">=</span> [<span class="nm">0</span>] <span class="op">*</span> <span class="nm">5</span>            <span class="cm"># [0,0,0,0,0]</span></pre>
+
+      <div class="section-label">Add / Remove</div>
+      <pre><span class="nm">l</span>.<span class="fn">append</span>(<span class="nm">4</span>)          <span class="cm"># add to end      O(1)</span>
+<span class="nm">l</span>.<span class="fn">insert</span>(<span class="nm">1</span>, <span class="nm">99</span>)      <span class="cm"># insert at idx   O(n)</span>
+<span class="nm">l</span>.<span class="fn">extend</span>([<span class="nm">5</span>,<span class="nm">6</span>])      <span class="cm"># add many        O(k)</span>
+<span class="nm">l</span>.<span class="fn">pop</span>()              <span class="cm"># remove last     O(1)</span>
+<span class="nm">l</span>.<span class="fn">pop</span>(<span class="nm">0</span>)             <span class="cm"># remove at idx   O(n)</span>
+<span class="nm">l</span>.<span class="fn">remove</span>(<span class="nm">99</span>)         <span class="cm"># remove by val   O(n)</span>
+<span class="nm">l</span>.<span class="fn">clear</span>()            <span class="cm"># empty list</span></pre>
+
+      <div class="section-label">Access / Search</div>
+      <pre><span class="nm">l</span>[<span class="nm">0</span>]                 <span class="cm"># first           O(1)</span>
+<span class="nm">l</span>[<span class="op">-</span><span class="nm">1</span>]                <span class="cm"># last            O(1)</span>
+<span class="nm">l</span>[<span class="nm">1</span>:<span class="nm">3</span>]               <span class="cm"># slice           O(k)</span>
+<span class="nm">l</span>.<span class="fn">index</span>(<span class="nm">99</span>)          <span class="cm"># find index      O(n)</span>
+<span class="nm">99</span> <span class="kw">in</span> <span class="nm">l</span>              <span class="cm"># membership      O(n)</span>
+<span class="fn">len</span>(<span class="nm">l</span>)               <span class="cm"># length          O(1)</span></pre>
+
+      <div class="section-label">Sort / Other</div>
+      <pre><span class="nm">l</span>.<span class="fn">sort</span>()             <span class="cm"># in-place        O(n log n)</span>
+<span class="nm">l</span>.<span class="fn">sort</span>(<span class="nm">reverse</span><span class="op">=</span><span class="kw">True</span>)
+<span class="fn">sorted</span>(<span class="nm">l</span>)            <span class="cm"># new list        O(n log n)</span>
+<span class="nm">l</span>.<span class="fn">reverse</span>()          <span class="cm"># in-place        O(n)</span>
+<span class="nm">l</span>.<span class="fn">count</span>(<span class="nm">2</span>)           <span class="cm"># occurrences     O(n)</span></pre>
+    </div>
+  </div>
+
+  <!-- DICT -->
+  <div class="card c2">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>Dict (Map)</h2>
+      <span class="tag">KEY-VALUE · ORDERED*</span>
+    </div>
+    <div class="card-body">
+      <div class="section-label">Init</div>
+      <pre><span class="nm">d</span> <span class="op">=</span> {}
+<span class="nm">d</span> <span class="op">=</span> {<span class="st">"a"</span>: <span class="nm">1</span>, <span class="st">"b"</span>: <span class="nm">2</span>}
+<span class="nm">d</span> <span class="op">=</span> <span class="fn">dict</span>(<span class="nm">a</span><span class="op">=</span><span class="nm">1</span>, <span class="nm">b</span><span class="op">=</span><span class="nm">2</span>)
+<span class="kw">from</span> collections <span class="kw">import</span> <span class="cl">defaultdict</span>
+<span class="nm">d</span> <span class="op">=</span> <span class="cl">defaultdict</span>(<span class="fn">int</span>)   <span class="cm"># default 0</span>
+<span class="nm">d</span> <span class="op">=</span> <span class="cl">defaultdict</span>(<span class="fn">list</span>)  <span class="cm"># default []</span></pre>
+
+      <div class="section-label">Set / Get / Delete</div>
+      <pre><span class="nm">d</span>[<span class="st">"key"</span>] <span class="op">=</span> <span class="nm">10</span>          <span class="cm"># set             O(1)</span>
+<span class="nm">d</span>[<span class="st">"key"</span>]               <span class="cm"># get (KeyError)  O(1)</span>
+<span class="nm">d</span>.<span class="fn">get</span>(<span class="st">"key"</span>, <span class="nm">0</span>)        <span class="cm"># get w/ default  O(1)</span>
+<span class="kw">del</span> <span class="nm">d</span>[<span class="st">"key"</span>]           <span class="cm"># remove          O(1)</span>
+<span class="nm">d</span>.<span class="fn">pop</span>(<span class="st">"key"</span>, <span class="kw">None</span>)    <span class="cm"># pop w/ default  O(1)</span>
+<span class="nm">d</span>.<span class="fn">clear</span>()             <span class="cm"># empty dict</span></pre>
+
+      <div class="section-label">Iterate</div>
+      <pre><span class="kw">for</span> k <span class="kw">in</span> <span class="nm">d</span>:           <span class="cm"># keys</span>
+<span class="kw">for</span> v <span class="kw">in</span> <span class="nm">d</span>.<span class="fn">values</span>():   <span class="cm"># values</span>
+<span class="kw">for</span> k, v <span class="kw">in</span> <span class="nm">d</span>.<span class="fn">items</span>(): <span class="cm"># pairs</span>
+<span class="st">"key"</span> <span class="kw">in</span> <span class="nm">d</span>            <span class="cm"># membership      O(1)</span>
+<span class="fn">len</span>(<span class="nm">d</span>)                <span class="cm"># size            O(1)</span></pre>
+
+      <div class="section-label">Merge / Other</div>
+      <pre><span class="nm">d</span>.<span class="fn">update</span>({<span class="st">"c"</span>: <span class="nm">3</span>})    <span class="cm"># merge in-place</span>
+<span class="nm">merged</span> <span class="op">=</span> {<span class="op">**</span><span class="nm">d1</span>, <span class="op">**</span><span class="nm">d2</span>}  <span class="cm"># merge new dict</span>
+<span class="nm">d</span>.<span class="fn">setdefault</span>(<span class="st">"k"</span>, [])  <span class="cm"># set if missing</span></pre>
+    </div>
+  </div>
+
+  <!-- SET -->
+  <div class="card c3">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>Set</h2>
+      <span class="tag">UNIQUE · UNORDERED</span>
+    </div>
+    <div class="card-body">
+      <div class="section-label">Init</div>
+      <pre><span class="nm">s</span> <span class="op">=</span> <span class="fn">set</span>()             <span class="cm"># empty (not {}!)</span>
+<span class="nm">s</span> <span class="op">=</span> {<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>}
+<span class="nm">s</span> <span class="op">=</span> <span class="fn">set</span>([<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">2</span>, <span class="nm">3</span>])  <span class="cm"># {1,2,3}</span></pre>
+
+      <div class="section-label">Add / Remove</div>
+      <pre><span class="nm">s</span>.<span class="fn">add</span>(<span class="nm">4</span>)              <span class="cm"># add one         O(1)</span>
+<span class="nm">s</span>.<span class="fn">update</span>([<span class="nm">5</span>,<span class="nm">6</span>])       <span class="cm"># add many        O(k)</span>
+<span class="nm">s</span>.<span class="fn">remove</span>(<span class="nm">4</span>)           <span class="cm"># rm (KeyError)   O(1)</span>
+<span class="nm">s</span>.<span class="fn">discard</span>(<span class="nm">4</span>)          <span class="cm"># rm (safe)       O(1)</span>
+<span class="nm">s</span>.<span class="fn">pop</span>()               <span class="cm"># remove random   O(1)</span>
+<span class="nm">s</span>.<span class="fn">clear</span>()             <span class="cm"># empty set</span></pre>
+
+      <div class="section-label">Set Operations</div>
+      <pre><span class="nm">a</span> <span class="op">|</span> <span class="nm">b</span>               <span class="cm"># union</span>
+<span class="nm">a</span> <span class="op">&amp;</span> <span class="nm">b</span>               <span class="cm"># intersection</span>
+<span class="nm">a</span> <span class="op">-</span> <span class="nm">b</span>               <span class="cm"># difference</span>
+<span class="nm">a</span> <span class="op">^</span> <span class="nm">b</span>               <span class="cm"># symmetric diff</span>
+<span class="nm">a</span>.<span class="fn">issubset</span>(<span class="nm">b</span>)       <span class="cm"># a ⊆ b</span>
+<span class="nm">a</span>.<span class="fn">issuperset</span>(<span class="nm">b</span>)    <span class="cm"># a ⊇ b</span>
+<span class="nm">x</span> <span class="kw">in</span> <span class="nm">s</span>              <span class="cm"># membership      O(1)</span></pre>
+    </div>
+  </div>
+
+  <!-- STACK with list -->
+  <div class="card c4">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>Stack (list)</h2>
+      <span class="tag">LIFO</span>
+    </div>
+    <div class="card-body">
+      <div class="section-label">Usage</div>
+      <pre><span class="nm">stack</span> <span class="op">=</span> []
+
+<span class="nm">stack</span>.<span class="fn">append</span>(<span class="nm">1</span>)      <span class="cm"># push      O(1)</span>
+<span class="nm">stack</span>.<span class="fn">append</span>(<span class="nm">2</span>)
+<span class="nm">stack</span>.<span class="fn">append</span>(<span class="nm">3</span>)
+
+<span class="nm">top</span> <span class="op">=</span> <span class="nm">stack</span>[<span class="op">-</span><span class="nm">1</span>]     <span class="cm"># peek      O(1)</span>
+<span class="nm">val</span> <span class="op">=</span> <span class="nm">stack</span>.<span class="fn">pop</span>()   <span class="cm"># pop       O(1)</span>
+
+<span class="kw">if not</span> <span class="nm">stack</span>:       <span class="cm"># is empty</span>
+    ...</pre>
+    </div>
+  </div>
+
+  <!-- QUEUE deque -->
+  <div class="card c5">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>Queue (deque)</h2>
+      <span class="tag">FIFO</span>
+    </div>
+    <div class="card-body">
+      <div class="section-label">Usage</div>
+      <pre><span class="kw">from</span> collections <span class="kw">import</span> <span class="cl">deque</span>
+<span class="nm">q</span> <span class="op">=</span> <span class="cl">deque</span>()
+
+<span class="nm">q</span>.<span class="fn">append</span>(<span class="nm">1</span>)         <span class="cm"># enqueue right O(1)</span>
+<span class="nm">q</span>.<span class="fn">appendleft</span>(<span class="nm">0</span>)    <span class="cm"># enqueue left  O(1)</span>
+<span class="nm">q</span>.<span class="fn">popleft</span>()         <span class="cm"># dequeue left  O(1)</span>
+<span class="nm">q</span>.<span class="fn">pop</span>()             <span class="cm"># dequeue right O(1)</span>
+<span class="nm">q</span>[<span class="nm">0</span>]                <span class="cm"># peek front    O(1)</span>
+<span class="nm">q</span>[<span class="op">-</span><span class="nm">1</span>]               <span class="cm"># peek back     O(1)</span>
+<span class="fn">len</span>(<span class="nm">q</span>) <span class="op">==</span> <span class="nm">0</span>         <span class="cm"># is empty</span></pre>
+    </div>
+  </div>
+
+  <!-- DEQUE as Stack -->
+  <div class="card c6">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>Stack (deque)</h2>
+      <span class="tag">THREAD-SAFE</span>
+    </div>
+    <div class="card-body">
+      <div class="section-label">Prefer deque over list for performance-critical stacks</div>
+      <pre><span class="kw">from</span> collections <span class="kw">import</span> <span class="cl">deque</span>
+<span class="nm">stack</span> <span class="op">=</span> <span class="cl">deque</span>()
+
+<span class="nm">stack</span>.<span class="fn">append</span>(<span class="nm">1</span>)      <span class="cm"># push      O(1)</span>
+<span class="nm">stack</span>.<span class="fn">append</span>(<span class="nm">2</span>)
+<span class="nm">top</span> <span class="op">=</span> <span class="nm">stack</span>[<span class="op">-</span><span class="nm">1</span>]     <span class="cm"># peek      O(1)</span>
+<span class="nm">val</span> <span class="op">=</span> <span class="nm">stack</span>.<span class="fn">pop</span>()   <span class="cm"># pop       O(1)</span>
+
+<span class="cm"># deque is O(1) on both ends</span>
+<span class="cm"># list.pop(0) is O(n) !</span></pre>
+    </div>
+  </div>
+
+  <!-- HEAP -->
+  <div class="card c1 wide">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>Heap / Priority Queue</h2>
+      <span class="tag">MIN-HEAP BY DEFAULT</span>
+    </div>
+    <div class="card-body">
+      <div class="two-col">
+        <div>
+          <div class="section-label">Min-Heap</div>
+          <pre><span class="kw">import</span> heapq
+
+<span class="nm">h</span> <span class="op">=</span> []
+<span class="fn">heapq</span>.<span class="fn">heappush</span>(<span class="nm">h</span>, <span class="nm">3</span>)  <span class="cm"># O(log n)</span>
+<span class="fn">heapq</span>.<span class="fn">heappush</span>(<span class="nm">h</span>, <span class="nm">1</span>)
+<span class="fn">heapq</span>.<span class="fn">heappush</span>(<span class="nm">h</span>, <span class="nm">2</span>)
+
+<span class="nm">top</span> <span class="op">=</span> <span class="nm">h</span>[<span class="nm">0</span>]             <span class="cm"># peek min  O(1)</span>
+<span class="nm">val</span> <span class="op">=</span> <span class="fn">heapq</span>.<span class="fn">heappop</span>(<span class="nm">h</span>) <span class="cm"># pop min   O(log n)</span>
+
+<span class="cm"># heapify existing list</span>
+<span class="nm">nums</span> <span class="op">=</span> [<span class="nm">3</span>, <span class="nm">1</span>, <span class="nm">4</span>, <span class="nm">1</span>, <span class="nm">5</span>]
+<span class="fn">heapq</span>.<span class="fn">heapify</span>(<span class="nm">nums</span>)   <span class="cm"># O(n)</span></pre>
+        </div>
+        <div>
+          <div class="section-label">Max-Heap (negate values)</div>
+          <pre><span class="nm">h</span> <span class="op">=</span> []
+<span class="fn">heapq</span>.<span class="fn">heappush</span>(<span class="nm">h</span>, <span class="op">-</span><span class="nm">3</span>) <span class="cm"># negate!</span>
+<span class="fn">heapq</span>.<span class="fn">heappush</span>(<span class="nm">h</span>, <span class="op">-</span><span class="nm">1</span>)
+<span class="nm">top</span> <span class="op">=</span> <span class="op">-</span><span class="nm">h</span>[<span class="nm">0</span>]            <span class="cm"># peek max  O(1)</span>
+<span class="nm">val</span> <span class="op">=</span> <span class="op">-</span><span class="fn">heapq</span>.<span class="fn">heappop</span>(<span class="nm">h</span>)<span class="cm"># pop max</span>
+
+<span class="cm"># Tuples: (priority, value)</span>
+<span class="fn">heapq</span>.<span class="fn">heappush</span>(<span class="nm">h</span>, (<span class="nm">1</span>, <span class="st">"low"</span>))
+<span class="fn">heapq</span>.<span class="fn">heappush</span>(<span class="nm">h</span>, (<span class="nm">5</span>, <span class="st">"high"</span>))
+<span class="nm">pri</span>, <span class="nm">val</span> <span class="op">=</span> <span class="fn">heapq</span>.<span class="fn">heappop</span>(<span class="nm">h</span>)
+
+<span class="cm"># n largest / smallest</span>
+<span class="fn">heapq</span>.<span class="fn">nlargest</span>(<span class="nm">3</span>, <span class="nm">nums</span>)
+<span class="fn">heapq</span>.<span class="fn">nsmallest</span>(<span class="nm">3</span>, <span class="nm">nums</span>)</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TUPLE + COUNTER -->
+  <div class="card c3">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>Tuple</h2>
+      <span class="tag">IMMUTABLE</span>
+    </div>
+    <div class="card-body">
+      <div class="section-label">Init &amp; Access</div>
+      <pre><span class="nm">t</span> <span class="op">=</span> (<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>)
+<span class="nm">t</span> <span class="op">=</span> <span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>          <span class="cm"># same thing</span>
+<span class="nm">t</span> <span class="op">=</span> (<span class="nm">42</span>,)             <span class="cm"># single element!</span>
+
+<span class="nm">t</span>[<span class="nm">0</span>]                  <span class="cm"># access      O(1)</span>
+<span class="nm">a</span>, <span class="nm">b</span>, <span class="nm">c</span> <span class="op">=</span> <span class="nm">t</span>           <span class="cm"># unpack</span>
+<span class="nm">a</span>, <span class="op">*</span><span class="nm">rest</span> <span class="op">=</span> <span class="nm">t</span>          <span class="cm"># star unpack</span>
+<span class="nm">x</span>, <span class="nm">y</span> <span class="op">=</span> <span class="nm">y</span>, <span class="nm">x</span>           <span class="cm"># swap vars</span></pre>
+    </div>
+  </div>
+
+  <div class="card c2">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>Counter</h2>
+      <span class="tag">FREQUENCY MAP</span>
+    </div>
+    <div class="card-body">
+      <div class="section-label">Usage</div>
+      <pre><span class="kw">from</span> collections <span class="kw">import</span> <span class="cl">Counter</span>
+
+<span class="nm">c</span> <span class="op">=</span> <span class="cl">Counter</span>([<span class="nm">1</span>,<span class="nm">2</span>,<span class="nm">2</span>,<span class="nm">3</span>])
+<span class="cm"># Counter({2:2, 1:1, 3:1})</span>
+<span class="nm">c</span> <span class="op">=</span> <span class="cl">Counter</span>(<span class="st">"abracadabra"</span>)
+
+<span class="nm">c</span>[<span class="st">"a"</span>]               <span class="cm"># count of "a"</span>
+<span class="nm">c</span>.<span class="fn">most_common</span>(<span class="nm">3</span>)     <span class="cm"># top 3 elements</span>
+<span class="nm">c</span>.<span class="fn">total</span>()            <span class="cm"># sum of counts</span>
+<span class="nm">c1</span> <span class="op">+</span> <span class="nm">c2</span>              <span class="cm"># combine counts</span></pre>
+    </div>
+  </div>
+
+  <!-- COMPLEXITY TABLE -->
+  <div class="card c5 full">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>Time Complexity Reference</h2>
+      <span class="tag">BIG-O</span>
+    </div>
+    <div class="card-body">
+      <div class="three-col">
+        <div>
+          <div class="section-label">List</div>
+          <table class="complexity-table">
+            <tr><th>Operation</th><th>Time</th></tr>
+            <tr><td>append / pop()</td><td class="o1">O(1)</td></tr>
+            <tr><td>Access by index</td><td class="o1">O(1)</td></tr>
+            <tr><td>Insert / pop(i)</td><td class="on">O(n)</td></tr>
+            <tr><td>Search (in)</td><td class="on">O(n)</td></tr>
+            <tr><td>Sort</td><td class="onlogn">O(n log n)</td></tr>
+          </table>
+        </div>
+        <div>
+          <div class="section-label">Dict &amp; Set</div>
+          <table class="complexity-table">
+            <tr><th>Operation</th><th>Time</th></tr>
+            <tr><td>get / set / del</td><td class="o1">O(1) avg</td></tr>
+            <tr><td>Membership (in)</td><td class="o1">O(1) avg</td></tr>
+            <tr><td>Iteration</td><td class="on">O(n)</td></tr>
+            <tr><td>Set union/inter</td><td class="on">O(n)</td></tr>
+          </table>
+        </div>
+        <div>
+          <div class="section-label">Heap &amp; Deque</div>
+          <table class="complexity-table">
+            <tr><th>Operation</th><th>Time</th></tr>
+            <tr><td>heappush / pop</td><td class="ologn">O(log n)</td></tr>
+            <tr><td>heapify</td><td class="on">O(n)</td></tr>
+            <tr><td>heap peek [0]</td><td class="o1">O(1)</td></tr>
+            <tr><td>deque append/pop</td><td class="o1">O(1) both ends</td></tr>
+          </table>
+        </div>
+      </div>
+      <div style="margin-top: 14px; display: flex; gap: 20px; font-size: 11px; flex-wrap: wrap;">
+        <span class="o1">■ O(1) constant</span>
+        <span class="ologn">■ O(log n) logarithmic</span>
+        <span class="on">■ O(n) linear</span>
+        <span class="onlogn">■ O(n log n) linearithmic</span>
+        <span class="on2">■ O(n²) quadratic</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

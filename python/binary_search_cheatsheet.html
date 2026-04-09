@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binary Search Cheat Sheet</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #7c6fff;
+    --accent2: #ff6b9d;
+    --accent3: #43e8c2;
+    --accent4: #ffa94d;
+    --text: #e8eaf6;
+    --muted: #8b90b8;
+    --true: #43e8c2;
+    --false: #ff6b9d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    padding: 2rem 1.5rem;
+    line-height: 1.6;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.8rem;
+    margin-bottom: .3rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: .9rem;
+    margin-bottom: 2.5rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: .9rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-header .num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: .85rem;
+    flex-shrink: 0;
+  }
+  .card-header h2 { font-size: 1rem; font-weight: 600; }
+  .card-header .tag {
+    margin-left: auto;
+    font-size: .72rem;
+    padding: .2rem .6rem;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .card-body { padding: 1.2rem; }
+  .question {
+    font-size: .85rem;
+    color: var(--muted);
+    font-style: italic;
+    margin-bottom: 1rem;
+    padding: .6rem .9rem;
+    background: var(--surface2);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+  }
+
+  /* Monotonic bar */
+  .mono-bar {
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+    height: 32px;
+    margin-bottom: 1rem;
+    font-size: .75rem;
+    font-weight: 600;
+  }
+  .mono-bar .seg {
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 .5rem;
+  }
+  .seg.f { background: rgba(255,107,157,.18); color: var(--false); }
+  .seg.t { background: rgba(67,232,194,.18); color: var(--true); }
+  .arrow-label {
+    font-size: .72rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  /* Code block */
+  pre {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    font-size: .78rem;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+    line-height: 1.7;
+  }
+  code { font-family: 'Fira Code', 'Cascadia Code', monospace; }
+  .kw  { color: #c792ea; }
+  .fn  { color: #82aaff; }
+  .cm  { color: #546e7a; font-style: italic; }
+  .num2{ color: var(--accent4); }
+  .op  { color: var(--accent3); }
+  .str { color: #c3e88d; }
+
+  /* Rules table */
+  .rules {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .82rem;
+    margin-bottom: 1rem;
+  }
+  .rules th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-weight: 600;
+    padding: .5rem .8rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .rules td {
+    padding: .5rem .8rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .rules tr:last-child td { border-bottom: none; }
+  .pill {
+    display: inline-block;
+    padding: .15rem .55rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: .8rem;
+  }
+  .pill.true  { background: rgba(67,232,194,.15); color: var(--true); }
+  .pill.false { background: rgba(255,107,157,.15); color: var(--false); }
+
+  /* Invariant box */
+  .invariant {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .75rem 1rem;
+    font-size: .8rem;
+  }
+  .invariant strong { color: var(--accent); }
+  .invariant .label {
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin-bottom: .35rem;
+  }
+
+  /* Comparisons section */
+  .compare-section {
+    max-width: 1200px;
+    margin: 2rem auto 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .compare-section h3 {
+    padding: .9rem 1.2rem;
+    font-size: .95rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent3);
+  }
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .82rem;
+  }
+  .compare-table th {
+    background: var(--surface2);
+    color: var(--muted);
+    padding: .6rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-table td {
+    padding: .6rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table code { font-size: .8rem; color: var(--accent4); }
+
+  /* Colors per card */
+  .c1 .num { background: rgba(124,111,255,.2); color: var(--accent); }
+  .c1 .tag { background: rgba(124,111,255,.15); color: var(--accent); }
+  .c1 .card-header { border-left: 3px solid var(--accent); }
+
+  .c2 .num { background: rgba(67,232,194,.2); color: var(--accent3); }
+  .c2 .tag { background: rgba(67,232,194,.15); color: var(--accent3); }
+  .c2 .card-header { border-left: 3px solid var(--accent3); }
+
+  .c3 .num { background: rgba(255,107,157,.2); color: var(--accent2); }
+  .c3 .tag { background: rgba(255,107,157,.15); color: var(--accent2); }
+  .c3 .card-header { border-left: 3px solid var(--accent2); }
+
+  .c4 .num { background: rgba(255,169,77,.2); color: var(--accent4); }
+  .c4 .tag { background: rgba(255,169,77,.15); color: var(--accent4); }
+  .c4 .card-header { border-left: 3px solid var(--accent4); }
+</style>
+</head>
+<body>
+
+<h1>Binary Search</h1>
+<p class="subtitle">Cheat Sheet completo — invariantes, ponteiros e o porquê de cada decisão</p>
+
+<div class="grid">
+
+  <!-- CARD 1: Exact Match -->
+  <div class="card c1">
+    <div class="card-header">
+      <div class="num">1</div>
+      <h2>Exact Match</h2>
+      <span class="tag">Busca exata</span>
+    </div>
+    <div class="card-body">
+      <div class="question">💬 "O valor <code>target</code> existe no array? Se sim, em qual índice?"</div>
+
+      <div class="mono-bar">
+        <div class="seg f" style="flex:3">< target</div>
+        <div class="seg t" style="flex:1">== target</div>
+        <div class="seg f" style="flex:3">> target</div>
+      </div>
+
+      <pre><code><span class="kw">def</span> <span class="fn">exact_match</span>(arr, target):
+    lo, hi = <span class="num2">0</span>, <span class="fn">len</span>(arr) <span class="op">-</span> <span class="num2">1</span>
+
+    <span class="kw">while</span> lo <span class="op">&lt;=</span> hi:          <span class="cm"># ← inclui lo == hi (1 elemento)</span>
+        mid = lo + (hi <span class="op">-</span> lo) <span class="op">//</span> <span class="num2">2</span>
+
+        <span class="kw">if</span> arr[mid] <span class="op">==</span> target:
+            <span class="kw">return</span> mid
+        <span class="kw">elif</span> arr[mid] <span class="op">&lt;</span> target:
+            lo = mid <span class="op">+</span> <span class="num2">1</span>
+        <span class="kw">else</span>:
+            hi = mid <span class="op">-</span> <span class="num2">1</span>
+
+    <span class="kw">return</span> <span class="op">-</span><span class="num2">1</span>               <span class="cm"># não encontrado</span></code></pre>
+
+      <table class="rules">
+        <tr><th>Condição</th><th>Movimento</th><th>Por quê</th></tr>
+        <tr><td><span class="pill true">arr[mid] == target</span></td><td>retorna <code>mid</code></td><td>Achou!</td></tr>
+        <tr><td><span class="pill false">arr[mid] &lt; target</span></td><td><code>lo = mid + 1</code></td><td><code>mid</code> e tudo à esquerda são menores — descarta</td></tr>
+        <tr><td><span class="pill false">arr[mid] &gt; target</span></td><td><code>hi = mid - 1</code></td><td><code>mid</code> e tudo à direita são maiores — descarta</td></tr>
+      </table>
+
+      <div class="invariant">
+        <div class="label">⚠️ Loop condition</div>
+        <strong>lo &lt;= hi</strong> — porque com um único elemento (<code>lo == hi</code>) ainda pode ser o target. Retorna <code>-1</code> ao terminar pois o elemento não existe.
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 2: Lower Bound -->
+  <div class="card c2">
+    <div class="card-header">
+      <div class="num">2</div>
+      <h2>Lower Bound</h2>
+      <span class="tag">1ª ocorrência / ≥ target</span>
+    </div>
+    <div class="card-body">
+      <div class="question">💬 "Qual o menor índice <code>i</code> tal que <code>arr[i] &gt;= target</code>?"</div>
+
+      <div class="mono-bar">
+        <div class="seg f" style="flex:4">False — arr[i] &lt; target</div>
+        <div class="seg t" style="flex:3">True — arr[i] &gt;= target</div>
+      </div>
+      <p class="arrow-label">↑ queremos o primeiro True</p>
+
+      <pre><code><span class="kw">def</span> <span class="fn">lower_bound</span>(arr, target):
+    lo, hi = <span class="num2">0</span>, <span class="fn">len</span>(arr)  <span class="cm"># hi = len (fora do array!)</span>
+
+    <span class="kw">while</span> lo <span class="op">&lt;</span> hi:           <span class="cm"># ← lo == hi → convergiu</span>
+        mid = lo + (hi <span class="op">-</span> lo) <span class="op">//</span> <span class="num2">2</span>
+
+        <span class="kw">if</span> arr[mid] <span class="op">&lt;</span> target:
+            lo = mid <span class="op">+</span> <span class="num2">1</span>       <span class="cm"># mid é False, descarta</span>
+        <span class="kw">else</span>:
+            hi = mid            <span class="cm"># mid pode ser a resposta, guarda</span>
+
+    <span class="kw">return</span> lo               <span class="cm"># lo == hi == resposta</span></code></pre>
+
+      <table class="rules">
+        <tr><th>Condição</th><th>Movimento</th><th>Por quê</th></tr>
+        <tr><td><span class="pill false">arr[mid] &lt; target</span></td><td><code>lo = mid + 1</code></td><td><code>mid</code> é definitivamente False — descarta</td></tr>
+        <tr><td><span class="pill true">arr[mid] &gt;= target</span></td><td><code>hi = mid</code></td><td><code>mid</code> pode ser a resposta — não descarta</td></tr>
+      </table>
+
+      <div class="invariant">
+        <div class="label">⚠️ Detalhes críticos</div>
+        <strong>hi = len(arr)</strong> cobre o caso "target maior que tudo" (retorna índice inexistente). <strong>hi = mid</strong> (não mid-1) porque mid pode ser o primeiro True. Ao fim, <code>lo == hi</code> é a resposta.
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 3: Upper Bound -->
+  <div class="card c3">
+    <div class="card-header">
+      <div class="num">3</div>
+      <h2>Upper Bound</h2>
+      <span class="tag">Após última ocorrência / > target</span>
+    </div>
+    <div class="card-body">
+      <div class="question">💬 "Qual o menor índice <code>i</code> tal que <code>arr[i] &gt; target</code>?"</div>
+
+      <div class="mono-bar">
+        <div class="seg f" style="flex:4">False — arr[i] &lt;= target</div>
+        <div class="seg t" style="flex:3">True — arr[i] &gt; target</div>
+      </div>
+      <p class="arrow-label">↑ queremos o primeiro True</p>
+
+      <pre><code><span class="kw">def</span> <span class="fn">upper_bound</span>(arr, target):
+    lo, hi = <span class="num2">0</span>, <span class="fn">len</span>(arr)
+
+    <span class="kw">while</span> lo <span class="op">&lt;</span> hi:
+        mid = lo + (hi <span class="op">-</span> lo) <span class="op">//</span> <span class="num2">2</span>
+
+        <span class="kw">if</span> arr[mid] <span class="op">&lt;=</span> target:   <span class="cm"># única diferença vs lower_bound!</span>
+            lo = mid <span class="op">+</span> <span class="num2">1</span>
+        <span class="kw">else</span>:
+            hi = mid
+
+    <span class="kw">return</span> lo</code></pre>
+
+      <table class="rules">
+        <tr><th>Condição</th><th>Movimento</th><th>Por quê</th></tr>
+        <tr><td><span class="pill false">arr[mid] &lt;= target</span></td><td><code>lo = mid + 1</code></td><td><code>mid</code> é False (inclui o igual!) — descarta</td></tr>
+        <tr><td><span class="pill true">arr[mid] &gt; target</span></td><td><code>hi = mid</code></td><td><code>mid</code> pode ser a resposta — não descarta</td></tr>
+      </table>
+
+      <div class="invariant">
+        <div class="label">💡 Uso combinado com Lower Bound</div>
+        <code>[lower_bound(t), upper_bound(t))</code> → range de todas as ocorrências de <strong>t</strong>.<br>
+        Contagem de ocorrências: <code>upper_bound(t) - lower_bound(t)</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 4: Binary Search on Answer -->
+  <div class="card c4">
+    <div class="card-header">
+      <div class="num">4</div>
+      <h2>Search on Answer</h2>
+      <span class="tag">Espaço de respostas</span>
+    </div>
+    <div class="card-body">
+      <div class="question">💬 "Qual o menor valor <code>x</code> tal que <code>f(x)</code> é True?" — ex: Koko Eating Bananas</div>
+
+      <div class="mono-bar">
+        <div class="seg f" style="flex:4">False — f(x) não satisfaz</div>
+        <div class="seg t" style="flex:3">True — f(x) satisfaz</div>
+      </div>
+      <p class="arrow-label">↑ queremos a fronteira</p>
+
+      <pre><code><span class="kw">def</span> <span class="fn">search_on_answer</span>(lo, hi, f):
+    <span class="cm"># Invariante: resposta sempre em [lo, hi]</span>
+    <span class="kw">while</span> lo <span class="op">&lt;</span> hi:           <span class="cm"># lo == hi → convergiu na fronteira</span>
+        mid = lo + (hi <span class="op">-</span> lo) <span class="op">//</span> <span class="num2">2</span>
+
+        <span class="kw">if</span> f(mid):
+            hi = mid            <span class="cm"># mid pode ser a resposta, guarda</span>
+        <span class="kw">else</span>:
+            lo = mid <span class="op">+</span> <span class="num2">1</span>       <span class="cm"># mid é False, descarta</span>
+
+    <span class="kw">return</span> lo               <span class="cm"># lo == hi == menor x com f(x) True</span>
+
+<span class="cm"># Koko: f(k) = "consigo comer tudo em h horas com velocidade k?"</span></code></pre>
+
+      <table class="rules">
+        <tr><th>Condição</th><th>Movimento</th><th>Por quê</th></tr>
+        <tr><td><span class="pill true">f(mid) == True</span></td><td><code>hi = mid</code></td><td><code>mid</code> satisfaz mas pode existir algo menor — guarda</td></tr>
+        <tr><td><span class="pill false">f(mid) == False</span></td><td><code>lo = mid + 1</code></td><td><code>mid</code> definitivamente não serve — descarta</td></tr>
+      </table>
+
+      <div class="invariant">
+        <div class="label">⚠️ Pré-condição obrigatória</div>
+        <strong>f deve ser monotônica:</strong> uma vez que f(x) vira True, f(x+1) também é True. Sem isso, binary search não funciona aqui.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Comparison table -->
+<div class="compare-section">
+  <h3>📊 Comparativo rápido</h3>
+  <table class="compare-table">
+    <tr>
+      <th>Técnica</th>
+      <th>Loop</th>
+      <th>hi inicial</th>
+      <th>Se True</th>
+      <th>Se False</th>
+      <th>Retorno</th>
+      <th>Uso típico</th>
+    </tr>
+    <tr>
+      <td>Exact Match</td>
+      <td><code>lo &lt;= hi</code></td>
+      <td><code>len - 1</code></td>
+      <td>retorna <code>mid</code></td>
+      <td><code>lo=mid+1</code> ou <code>hi=mid-1</code></td>
+      <td><code>-1</code> (não achou)</td>
+      <td>Verificar existência</td>
+    </tr>
+    <tr>
+      <td>Lower Bound</td>
+      <td><code>lo &lt; hi</code></td>
+      <td><code>len</code></td>
+      <td><code>hi = mid</code></td>
+      <td><code>lo = mid + 1</code></td>
+      <td><code>lo</code></td>
+      <td>Primeira ocorrência / inserção</td>
+    </tr>
+    <tr>
+      <td>Upper Bound</td>
+      <td><code>lo &lt; hi</code></td>
+      <td><code>len</code></td>
+      <td><code>hi = mid</code></td>
+      <td><code>lo = mid + 1</code></td>
+      <td><code>lo</code></td>
+      <td>Após última ocorrência / contagem</td>
+    </tr>
+    <tr>
+      <td>Search on Answer</td>
+      <td><code>lo &lt; hi</code></td>
+      <td>domínio do problema</td>
+      <td><code>hi = mid</code></td>
+      <td><code>lo = mid + 1</code></td>
+      <td><code>lo</code></td>
+      <td>Otimização / decisão monotônica</td>
+    </tr>
+  </table>
+</div>
+
+</body>
+</html>
