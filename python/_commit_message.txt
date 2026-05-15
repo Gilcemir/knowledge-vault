@@ -1,0 +1,51 @@
+python: convert HTML cheat sheets to GitHub-rendered Markdown
+
+Converts 4 source HTML cheat sheets into 12 focused Markdown files
+organized by Python type name (list/dict/set/str/tuple/deque/heapq) plus
+algorithm/concept files (binary_search/iteration/re/conversions/sorting).
+Translates Portuguese commentary in the binary-search file to English,
+drops Java comparison tabs from the iteration cheat sheet, and applies
+LeetCode-relevant Pythonic idioms (2D-array aliasing trap, bisect
+substitute for hand-rolled lower/upper bounds, frozenset, walrus,
+itertools.pairwise/accumulate, f-string `=` debug form, (priority,
+tiebreak, value) heap pattern, set-trick membership refactor). Each
+per-type file has a top-of-file complexity reference table; algorithm
+files annotate complexity inline.
+
+Per-file coverage:
+
+binary_search.md: covers [exact match, lower bound, upper bound, count via bound subtraction, search-on-answer with runnable Koko Eating Bananas, bisect_left/right/insort, mid overflow-safe formula, loop-invariant rationale, comparison table]; translates PT-BR commentary to English
+
+str.md: covers [str complexity table, create/concat/slice with s[::-1] reverse, f-strings with format spec and = debug form, case/whitespace methods, search-replace, padding, split/join with += anti-pattern, partition, character-class checks, palindrome via slicing, ord/chr cross-link]; dropped [list comprehensions -> list.md, dict comprehensions -> dict.md, sorting -> sorting.md, enumerate/zip/map/filter/any/all -> iteration.md, Counter/defaultdict -> dict.md, regex -> re.md, type conversions and isinstance -> conversions.md]
+
+re.md: covers [search/match/fullmatch/findall/finditer with group capture, sub/split with backreferences and replacement functions, re.compile, common patterns email/URL/HEX/INTEGER/WORD/HTML-strip, character class cheat table, raw-string convention]
+
+conversions.md: covers [int/float/round numeric conversions with truncation gotcha, math.floor/ceil/trunc for negatives, base parsing int(s, base), bin/oct/hex with f-string formatting, ord/chr, string-collection conversions, falsy values, isinstance vs type with bool/int subclass note, safe number parsing, integer division and modulo sign behavior, digit-by-digit on int]
+
+sorting.md: covers [sorted vs .sort distinction, key= with lambda and itemgetter, multi-key tuples with negation for desc, two-pass stable sort, min/max with key= and default=, sum/len averages, statistics.mean/median, LeetCode patterns: sort by frequency, interval sort, nlargest cross-link]
+
+list.md: covers [list complexity table, init incl. [0]*n, canonical 2D aliasing trap [[0]*n]*m, mutate operations, access/search, set-trick membership refactor (anti-pattern), slicing including assignment, list comprehension, stack-via-list, backtracking single-element mutable cell, prefix sums, in-place reverse]; dropped [unpacking idioms -> iteration.md, sorting key= -> sorting.md, comprehension mechanics -> iteration.md]
+
+dict.md: covers [dict complexity table, create/access with .get default, iterate with views, sorted iteration by key/value, merge with | and **, dict comprehension with invert pattern, Counter with most_common/total/arithmetic, defaultdict with anti-pattern vs manual, LeetCode patterns: two-sum index lookup, anagram grouping, tuple keys, first/last occurrence]; canonical home for Counter and defaultdict per redundancy report
+
+set.md: covers [set complexity table, init with set() vs {} gotcha, add/remove/discard, set operations |/&/-/^ and in-place variants, isdisjoint, membership idioms with allowed-set pattern, dedup-preserving-order, set comprehension, frozenset for dict keys and sets-of-sets, LeetCode patterns: duplicate detection, DFS visited tracking, 2D grid visited with tuples]
+
+tuple.md: covers [tuple complexity table, init with single-element trailing-comma gotcha, access and immutability with mutable-inside note, hashability for dict keys / set elements / memoization keys, @cache mention, multi-return via implicit tuple, divmod, priority queue tuples]; dropped [unpacking details -> iteration.md]
+
+deque.md: covers [deque complexity table, init with maxlen, append/appendleft/pop/popleft, peek, empty check, why-deque-beats-list anti-pattern for queues, bounded deque sliding window, rotate, LeetCode patterns: BFS, level-order traversal, monotonic deque for sliding window maximum]
+
+heapq.md: covers [heapq complexity table, min-heap push/pop/peek/heapify, heapreplace/heappushpop, max-heap via value negation, (priority, tiebreak, value) pattern with itertools.count counter, nlargest/nsmallest with key=, LeetCode patterns: k-th largest, Dijkstra with stale-entry filter, merge-k-sorted-lists]
+
+iteration.md: covers [for/range with countdown, while with break/continue/for-else, enumerate with start= and range(len(...)) anti-pattern, zip with strict= 3.10+, unpacking with star/swap/nested, walrus := for while loops and comprehensions, list/dict/set comprehensions and generator expressions mechanics, any/all with short-circuit note, map/filter with comp-preferred note, generators with yield and islice for infinite, itertools chain/islice/combinations/permutations/product/groupby/count/cycle, pairwise (3.10+), accumulate with initial=/operator.mul/max, LeetCode patterns: two-pointers, run-length encoding via groupby, grid neighbors, subset bitmask enumeration]; canonical home for enumerate/zip/map/filter/any/all/comprehension-mechanics/unpacking/walrus/generators/itertools per redundancy report
+
+Validation: 92 python code blocks parsed via ast.parse (0 failures);
+1 runnable block (Koko Eating Bananas binary search) executed with
+inline assertions (0 failures). Concept-preservation check: every
+concept from Stage 1 inventory is either present in target files or
+explicitly redirected per redundancy report.
+
+Gaps surfaced but not implemented (Section 5 of _audit.md): functools.lru_cache/@cache,
+match/case structural pattern matching, fuller bisect.md with insort,
+single-element-list-as-cell tied to a future recursion.md.
+
+Original HTML files preserved untouched.
