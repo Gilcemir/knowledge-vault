@@ -97,6 +97,23 @@ for a, b in zip(names, scores, strict=True):
     pass                              # ValueError if lengths differ
 ```
 
+## `reversed` & `next(iter(...))`
+
+```python
+for x in reversed(nums):              # lazy — no copy, unlike nums[::-1]
+    pass
+
+for i in reversed(range(n)):          # n-1 .. 0 — clearer than range(n-1, -1, -1)
+    pass
+
+# Grab an arbitrary element from a set/dict WITHOUT removing it
+s = {1, 2, 3}
+x = next(iter(s))                     # any element — s.pop() would remove it
+
+# First match with a default
+first_even = next((x for x in nums if x % 2 == 0), None)
+```
+
 ## Unpacking
 
 ```python

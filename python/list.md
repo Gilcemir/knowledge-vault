@@ -19,6 +19,9 @@ Ordered, mutable, contiguous sequence — the default LeetCode container.
 | `nums.index(x)` | O(n) | |
 | `nums.count(x)` | O(n) | |
 | `nums[i:j]` | O(j−i) | copy, O(j−i) space |
+| `nums + other` | O(n+k) | new list — see Concatenate & repeat |
+| `nums.extend(other)` | O(k) | in-place |
+| `nums.copy()` | O(n) | shallow copy |
 | `nums.sort()` | O(n log n) | Timsort, in-place — see [sorting.md](sorting.md) |
 | `sorted(nums)` | O(n log n) | returns new list, O(n) extra space |
 | `nums.reverse()` | O(n) | in-place |
@@ -33,6 +36,61 @@ nums = list(range(5))                 # [0, 1, 2, 3, 4]
 nums = [0] * n                        # n zeros — common for DP 1D arrays
 seen = [False] * len(grid)
 ```
+
+## Concatenate & repeat
+
+```python
+a = [1, 2, 3]
+b = [4, 5, 6]
+
+c = a + b                             # [1,2,3,4,5,6] — NEW list, a/b untouched   O(n+k)
+a += b                                # same as a.extend(b) — mutates a in place
+a.extend(b)                           # in-place, O(k)
+[0, 1] * 3                            # [0, 1, 0, 1, 0, 1] — repetition
+```
+
+`+` vs `extend`:
+
+```python
+# extend mutates and returns None — classic trap:
+x = a.extend(b)                       # x is None, NOT the list!
+
+# + builds a new list — fine for small data, wasteful in a loop:
+# don't: O(n²) — each + recopies everything accumulated so far
+res = []
+for chunk in chunks:
+    res = res + chunk
+
+# do: O(total) amortized
+res = []
+for chunk in chunks:
+    res.extend(chunk)
+```
+
+Note `a += b` is `extend` (in-place), not `a = a + b` (rebind to a new list) — the difference is visible when another variable aliases `a`.
+
+## Copy & aliasing
+
+```python
+a = [1, 2, 3]
+
+b = a                                 # NO copy — both names point to the same list
+b.append(4)                           # a is now [1, 2, 3, 4] too
+
+b = a.copy()                          # shallow copy — independent top level
+b = a[:]                              # same
+b = list(a)                           # same
+
+# Shallow means nested objects are still shared:
+grid = [[1, 2], [3, 4]]
+g2 = grid.copy()
+g2[0].append(9)                       # grid[0] is now [1, 2, 9] — inner lists shared!
+
+import copy
+g3 = copy.deepcopy(grid)              # fully independent — O(total elements)
+```
+
+Rule of thumb: copies of flat lists of ints/strs are safe with `.copy()`/`[:]`; anything nested (matrices, lists of lists in backtracking) needs `deepcopy` or a per-row copy like `[row[:] for row in grid]`.
 
 ## 2D arrays — row aliasing trap
 
@@ -62,7 +120,12 @@ nums.pop()                            # 8, list now ends 9,7         O(1)
 nums.pop(0)                           # 99 — costs O(n) shift
 nums.remove(1)                        # removes FIRST occurrence     O(n)
 nums.clear()                          # []
+
+del nums[0]                           # remove by index, no return   O(n)
+del nums[1:3]                         # remove a slice in place
 ```
+
+`pop(i)` returns the removed value; `del nums[i]` doesn't — use `del` when you don't need it, and `remove(x)` when you know the value but not the index.
 
 ## Access & search
 
@@ -74,6 +137,22 @@ nums[1:3]                             # [1, 4]       — slice (new list)
 nums.index(4)                         # 2            — position; raises if absent
 nums.count(1)                         # 2            — occurrences
 4 in nums                             # True         — O(n); use a set if hot
+```
+
+## Aggregations
+
+```python
+nums = [3, 1, 4, 1, 5]
+sum(nums)                             # 14                           O(n)
+min(nums)                             # 1   — raises on empty list; min(nums, default=0)
+max(nums)                             # 5
+max(nums, key=abs)                    # element with largest |x|
+
+any(x > 4 for x in nums)              # True  — short-circuits
+all(x > 0 for x in nums)              # True
+
+# argmax — index of the largest element
+i = max(range(len(nums)), key=nums.__getitem__)   # 4
 ```
 
 ## Membership — the set trick

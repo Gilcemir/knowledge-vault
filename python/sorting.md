@@ -52,6 +52,23 @@ data.sort(key=lambda x: x["age"], reverse=True)    # age DESC (secondary)
 data.sort(key=lambda x: x["name"])                 # name ASC (primary) — stable, preserves age order within ties
 ```
 
+## `cmp_to_key` — when the order isn't a `key=`
+
+Some orderings compare *pairs* and can't be expressed as a per-element key. Classic case: LC 179 Largest Number — "a before b if `a+b > b+a` as strings":
+
+```python
+from functools import cmp_to_key
+
+def largest_number(nums):
+    s = list(map(str, nums))
+    s.sort(key=cmp_to_key(lambda a, b: -1 if a + b > b + a else 1))
+    return str(int("".join(s)))       # int() collapses "00" → "0"
+
+# Comparator contract: return negative (a first), positive (b first), or 0 (tie)
+```
+
+Reach for `cmp_to_key` only when you genuinely can't derive a key — `key=` is faster (one call per element vs O(n log n) comparator calls) and clearer.
+
 ## `min` / `max` with `key=`
 
 ```python

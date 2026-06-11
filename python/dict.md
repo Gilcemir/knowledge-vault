@@ -156,6 +156,64 @@ dd["x"]                               # returns [] AND creates the key
 
 If you don't want creation-on-read, use `.get(k, [])` instead.
 
+## Mutation during iteration — trap
+
+```python
+# don't: adding/removing keys while iterating raises RuntimeError
+d = {"a": 1, "b": 2, "c": 3}
+for k in d:
+    if d[k] > 1:
+        del d[k]                      # RuntimeError: dictionary changed size during iteration
+
+# do: iterate over a snapshot of the keys
+for k in list(d):
+    if d[k] > 1:
+        del d[k]
+
+# or build a new dict
+d = {k: v for k, v in d.items() if v <= 1}
+```
+
+Mutating **values** of existing keys during iteration is fine — only adding/removing keys breaks.
+
+## `dict.fromkeys`
+
+```python
+d = dict.fromkeys(["a", "b", "c"])        # {'a': None, 'b': None, 'c': None}
+d = dict.fromkeys(["a", "b", "c"], 0)     # {'a': 0, 'b': 0, 'c': 0}
+
+# Ordered dedup — keys are unique and insertion-ordered (3.7+)
+unique = list(dict.fromkeys([3, 1, 3, 2, 1]))    # [3, 1, 2]
+```
+
+Careful with a mutable default: `dict.fromkeys(keys, [])` shares ONE list across all keys — same aliasing trap as `[[0] * n] * m` (see [list.md](list.md#2d-arrays--row-aliasing-trap)).
+
+## `OrderedDict` — LRU cache (LC 146)
+
+A plain dict is insertion-ordered but can't cheaply *reorder*. `OrderedDict` adds `move_to_end` and `popitem(last=False)` — exactly the two operations an LRU cache needs:
+
+```python
+from collections import OrderedDict
+
+class LRUCache:
+    def __init__(self, capacity):
+        self.cap = capacity
+        self.od = OrderedDict()
+
+    def get(self, key):
+        if key not in self.od:
+            return -1
+        self.od.move_to_end(key)          # mark as most-recently-used   O(1)
+        return self.od[key]
+
+    def put(self, key, value):
+        if key in self.od:
+            self.od.move_to_end(key)
+        self.od[key] = value
+        if len(self.od) > self.cap:
+            self.od.popitem(last=False)   # evict least-recently-used    O(1)
+```
+
 ## LeetCode patterns
 
 ```python

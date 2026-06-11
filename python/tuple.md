@@ -78,6 +78,30 @@ A tuple is hashable iff all its elements are. `(1, 2, 3)` is hashable; `(1, [2, 
 
 For unordered composite keys where order shouldn't matter (`{a, b} == {b, a}`), use [set.md#frozenset](set.md#frozenset) instead.
 
+## `namedtuple` — readable composite values
+
+```python
+from collections import namedtuple
+
+Point = namedtuple("Point", ["x", "y"])
+p = Point(1, 2)
+p.x, p.y                              # 1, 2 — field access by name
+p[0]                                  # 1 — still a tuple (unpacking, hashing all work)
+x, y = p                              # unpacks like any tuple
+
+# Typed version — better for non-throwaway code
+from typing import NamedTuple
+
+class Event(NamedTuple):
+    time: int
+    kind: str
+
+e = Event(5, "start")
+e.time                                # 5
+```
+
+Use it when a bare tuple's positional fields start needing comments (`iv[0]` vs `iv.start`). Immutable and hashable like any tuple — works as dict key.
+
 ## LeetCode patterns
 
 ```python

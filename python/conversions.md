@@ -26,6 +26,27 @@ math.ceil(3.01)          # 4
 math.trunc(-3.99)        # -3 — same as int() for floats
 ```
 
+## `divmod`, `pow` and infinity
+
+```python
+q, r = divmod(17, 5)     # (3, 2) — quotient and remainder in one call
+pow(2, 10)               # 1024
+pow(2, 10, 1000)         # 24 — modular exponentiation, FAST (O(log b))
+
+# don't: (2 ** huge) % MOD materializes the giant intermediate
+MOD = 10**9 + 7
+(2 ** 10**6) % MOD       # slow — builds a 300k-digit int first
+pow(2, 10**6, MOD)       # fast — reduces mod at every step
+
+float('inf')             # ∞ — compares greater than every number
+float('-inf')
+import math
+math.inf                 # same value; pick one style and stick to it
+best = float('inf')      # canonical "minimum so far" sentinel
+```
+
+See [math.md](math.md) for `gcd`, `isqrt`, `comb` and friends.
+
 ## Bases and `ord`/`chr`
 
 ```python

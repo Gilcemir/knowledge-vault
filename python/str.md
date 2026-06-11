@@ -63,6 +63,20 @@ s.rstrip()      # '  Hello World'
 s.strip(",.!")  # also strips listed chars from both ends
 ```
 
+## `removeprefix` / `removesuffix` (3.9+)
+
+```python
+"img_photo.png".removeprefix("img_")  # 'photo.png'
+"test_name.py".removesuffix(".py")    # 'test_name'
+"hello".removeprefix("xyz")           # 'hello' — no error if absent
+
+# don't: strip removes a CHARACTER SET, not a literal prefix/suffix
+"file.pyp".rstrip(".py")              # 'file' — strips ANY trailing '.', 'p' or 'y'!
+"file.pyp".removesuffix(".py")        # 'file.pyp' — correct: suffix doesn't match
+```
+
+The `strip("...")` char-set misuse is a classic silent-wrong bug — use `removeprefix`/`removesuffix` for literal affixes.
+
 ## Search & replace
 
 ```python
