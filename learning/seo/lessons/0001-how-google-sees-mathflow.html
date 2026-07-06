@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 1 — How Google Sees MathFlow</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>How Google Sees MathFlow</h1>
+<p class="lesson-meta">Lesson 0001 · SEO for MathFlow · ~15 minutes · no prerequisites</p>
+
+<p><strong>SEO — search engine optimization</strong> — is the practice of making a website easy for
+search engines to find, understand, and recommend, so that people searching for what you offer
+actually reach you. No tricks involved: it's mostly about communicating clearly with a machine
+that reads your HTML.</p>
+
+<p>Before touching a single tag, you need the one mental model every SEO decision hangs off:
+<strong>a search engine is a pipeline, and a page can fall out at any stage.</strong>
+By the end of this lesson you'll know the three stages, and you'll see exactly where MathFlow
+stands in each one today. Every technical term below is defined where it first appears — this
+course assumes zero SEO background.</p>
+
+<h2>The pipeline: crawl → index → serve</h2>
+
+<p>Google's own engineering docs describe Search as
+<a href="https://developers.google.com/search/docs/fundamentals/how-search-works">three stages</a>,
+and — importantly — <em>not every page makes it through each stage</em>:</p>
+
+<table>
+  <tr><th>Stage</th><th>What happens</th><th>How a page fails here</th></tr>
+  <tr>
+    <td><strong>1. Crawling</strong></td>
+    <td>Googlebot discovers URLs (via links and sitemaps) and downloads the page. If the page relies on JavaScript, Google also <em>renders</em> it with a headless Chromium.</td>
+    <td>No links point to it, it's blocked by <code>robots.txt</code>, or the server errors.</td>
+  </tr>
+  <tr>
+    <td><strong>2. Indexing</strong></td>
+    <td>Google analyzes the text, tags, images and decides what the page is about — and whether it's a duplicate of another page (canonicalization).</td>
+    <td>A <code>noindex</code> tag, low-quality/duplicate content, or Google picks a different URL as canonical.</td>
+  </tr>
+  <tr>
+    <td><strong>3. Serving</strong></td>
+    <td>For each query, Google ranks indexed pages by relevance and quality and renders a result: title link + snippet.</td>
+    <td>The page is indexed but loses to more relevant or more trusted pages. This is where "ranking" lives.</td>
+  </tr>
+</table>
+
+<div class="callout key">
+  <span class="callout-title">Key idea</span>
+  Most beginners obsess over stage 3 (ranking) while their real problem is in stage 1 or 2.
+  Diagnosing means asking, in order: <em>Can Google reach it? Did Google index it? Why isn't it winning the query?</em>
+</div>
+
+<h2>Where MathFlow stands today</h2>
+
+<p>I audited the repo (<code>src/MathFlow/Pages/Shared/_Layout.cshtml</code> and <code>wwwroot/</code>).
+Here's the honest picture, mapped to the pipeline:</p>
+
+<h3>Working in your favor</h3>
+<ul>
+  <li><span class="good">✅ Server-rendered</span> — Razor Pages sends complete HTML. No JavaScript-rendering risk in stage 1. This is a genuinely strong starting position that SPA developers have to fight for.</li>
+  <li><span class="good">✅ <code>&lt;html lang&gt;</code></span> set from the request culture.</li>
+  <li><span class="good">✅ Title pattern</span> exists (<code>@ViewData["Title"] - AppName</code>), and headings are structured (one <code>h1</code>, then <code>h2</code>s).</li>
+</ul>
+
+<h3>Missing (each one is a future lesson + a real commit)</h3>
+<ul>
+  <li><span class="bad">❌ No <em>meta description</em></span> — a one-sentence summary you put in a <code>&lt;meta name="description"&gt;</code> tag; Google often shows it as the grey <em>snippet</em> text under your result. Without one, Google writes your snippet for you — badly. <em>(stage 3: serving)</em></li>
+  <li><span class="bad">❌ No <code>robots.txt</code> or <em>sitemap</em></span> — <code>robots.txt</code> is a file at your domain root that tells crawlers what not to fetch; a sitemap is an XML list of the URLs you want found. Both 404 on the live site today, and login/admin pages are crawlable. <em>(stage 1: crawling)</em></li>
+  <li><span class="bad">❌ No <em>canonical URLs</em></span> — a <code>&lt;link rel="canonical"&gt;</code> tag declaring "this is the official address of this page", so <code>/converter</code>, <code>/Converter</code> and <code>/converter?x=1</code> don't get indexed as competing duplicates. <em>(stage 2: indexing)</em></li>
+  <li><span class="bad">❌ No <em>hreflang</em></span> — tags that tell Google "this page exists in English, Portuguese, and Spanish; here are the siblings". Your site is localized EN/pt-BR/es but never says so, so Google may show Spanish searchers the English page. <em>(stage 3: serving the right language — and your priority audience is PT-BR/ES)</em></li>
+  <li><span class="bad">❌ No <em>structured data</em></span> — a small JSON block (called JSON-LD) describing the page in a machine vocabulary; a free web tool is exactly what the <a href="https://developers.google.com/search/docs/appearance/structured-data/software-app"><code>WebApplication</code> type</a> is for, and it can earn a richer-looking result. <em>(stage 3)</em></li>
+  <li><span class="warn">⚠️ Homepage title renders as "OMML2MathML - OMML2MathML"</span> — the page sets the brand as its title and the layout appends the brand again. Beyond the duplication, nobody searches that string; titles should speak the searcher's language ("Convert Word equations to MathML"). <em>(stage 3)</em></li>
+</ul>
+
+<div class="callout gotcha">
+  <span class="callout-title">Gotcha</span>
+  <code>robots.txt</code> does <strong>not</strong> hide a page from Google — it only stops crawling.
+  A blocked-but-linked page can still be indexed (URL only). To keep login/admin pages out of results, the tool is
+  <code>noindex</code>, not robots.txt. <a href="https://developers.google.com/search/docs/crawling-indexing/robots/intro">Google's robots.txt intro</a> is explicit about this — it's the most common beginner mixup.
+</div>
+
+<h2>Try it now — 5 minutes, real feedback</h2>
+
+<div class="callout try-it">
+  <span class="callout-title">Hands-on</span>
+  <ol>
+    <li>Search Google for <code>site:omml2mathml.com</code>. This operator lists every URL Google has <em>indexed</em> (stage 2) for your domain. Count them. Any pages there that shouldn't be (login? register?)? Any missing (the converter itself)?</li>
+    <li>Pick any site you admire and view its source (<code>Ctrl/Cmd+U</code>). Find, in the <code>&lt;head&gt;</code>: the <code>&lt;title&gt;</code>, <code>&lt;meta name="description"&gt;</code>, <code>&lt;link rel="canonical"&gt;</code>, and any <code>&lt;script type="application/ld+json"&gt;</code>. These four are the skeleton MathFlow is missing.</li>
+  </ol>
+  Report back what <code>site:</code> found — it decides whether our next lesson is about getting indexed at all, or about improving what's already indexed.
+</div>
+
+<h2>Check yourself</h2>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">MathFlow's converter page is live and linked from the homepage, but it never appears for any query — not even <code>site:</code> searches. Which stage is the problem most likely in?</p>
+  <button class="quiz-opt">Serving — the page ranks too low</button>
+  <button class="quiz-opt">Indexing — Google never stored it</button>
+  <button class="quiz-opt">Nothing wrong — wait a few days</button>
+  <p class="quiz-explain">Absent from <code>site:</code> means Google has not indexed the URL — a stage 1/2 problem. Ranking (stage 3) only matters for pages that are already in the index. First check: URL Inspection in Search Console.</p>
+</div>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">You want MathFlow's <code>/admin</code> pages to never show up in Google results. What's the correct mechanism?</p>
+  <button class="quiz-opt">Block the path in robots.txt file</button>
+  <button class="quiz-opt">Omit them from the sitemap file</button>
+  <button class="quiz-opt">Serve a noindex directive on them</button>
+  <p class="quiz-explain">robots.txt only stops crawling — a linked URL can still be indexed without content. Sitemaps are discovery hints, not exclusion. Only <code>noindex</code> (meta tag or <code>X-Robots-Tag</code> header) removes a page from results — and the page must be crawlable for Google to see it.</p>
+</div>
+
+<h2>Go deeper</h2>
+<p><strong>Primary source for this lesson:</strong>
+<a href="https://developers.google.com/search/docs/fundamentals/how-search-works">How Google Search works — in-depth guide</a> (Google Search Central).
+It's the single most authoritative document on the pipeline; ~20 minutes, written for developers.</p>
+<p>Broader on-ramp: the free <a href="https://ahrefs.com/academy/seo-training-course">Ahrefs SEO Course for Beginners</a> (~2h of video, no sign-up). Full source list in <a href="../RESOURCES.md">RESOURCES.md</a>.</p>
+
+<div class="ask-teacher">
+  <strong>Questions?</strong> Your teacher (the agent in this workspace) can explain anything here in more depth,
+  audit a specific page with you, or adjust the pace. Just ask in the next session — and bring the result of the
+  <code>site:</code> exercise.
+</div>
+
+<nav class="lesson-nav">
+  <span></span>
+  <span>Next: (planned) writing MathFlow's title &amp; meta description →</span>
+</nav>
+
+</body>
+</html>

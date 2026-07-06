@@ -1,0 +1,166 @@
+/* Shared stylesheet for all SEO lessons & reference docs in this workspace.
+   Link from lessons/ and reference/ as: <link rel="stylesheet" href="../assets/course.css"> */
+
+:root {
+  --ink: #1a1a1a;
+  --ink-soft: #555;
+  --paper: #fdfdfa;
+  --accent: #0b57d0;      /* link blue */
+  --accent-soft: #e8f0fe;
+  --good: #1e7e34;
+  --bad: #b02a37;
+  --warn: #8a6d00;
+  --border: #ddd;
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --serif: Georgia, "Times New Roman", serif;
+  --sans: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.6;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 5rem;
+  font-size: 1.05rem;
+}
+
+h1, h2, h3 { font-family: var(--sans); line-height: 1.25; }
+h1 { font-size: 1.9rem; margin-bottom: 0.3rem; }
+h2 { font-size: 1.35rem; margin-top: 2.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+h3 { font-size: 1.1rem; margin-top: 1.8rem; }
+
+.lesson-meta {
+  font-family: var(--sans);
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  margin-bottom: 2rem;
+}
+
+a { color: var(--accent); }
+a:hover { text-decoration-thickness: 2px; }
+
+code, pre {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: #f3f3ee;
+  border-radius: 4px;
+}
+code { padding: 0.1em 0.35em; }
+pre {
+  padding: 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  line-height: 1.45;
+}
+pre code { background: none; padding: 0; }
+
+blockquote {
+  margin: 1.5rem 0;
+  padding: 0.6rem 1.2rem;
+  border-left: 4px solid var(--accent);
+  background: var(--accent-soft);
+  font-style: italic;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  margin: 1.2rem 0;
+}
+th, td { border: 1px solid var(--border); padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; }
+th { background: #f3f3ee; }
+
+.good { color: var(--good); font-weight: 600; }
+.bad { color: var(--bad); font-weight: 600; }
+.warn { color: var(--warn); font-weight: 600; }
+
+/* Callout boxes */
+.callout {
+  font-family: var(--sans);
+  border: 1px solid var(--border);
+  border-left-width: 5px;
+  border-radius: 6px;
+  padding: 0.9rem 1.2rem;
+  margin: 1.5rem 0;
+  font-size: 0.95rem;
+}
+.callout.key    { border-left-color: var(--accent); background: var(--accent-soft); }
+.callout.try-it { border-left-color: var(--good);  background: #eaf6ec; }
+.callout.gotcha { border-left-color: var(--bad);   background: #fdeef0; }
+.callout .callout-title {
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+}
+
+/* Quiz component styles (used by quiz.js) */
+.quiz {
+  font-family: var(--sans);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.2rem 1.4rem;
+  margin: 1.8rem 0;
+  background: #fff;
+}
+.quiz .quiz-q { font-weight: 700; margin-bottom: 0.8rem; }
+.quiz button.quiz-opt {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 0.55rem 0.9rem;
+  margin: 0.4rem 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fafafa;
+  cursor: pointer;
+}
+.quiz button.quiz-opt:hover { border-color: var(--accent); background: var(--accent-soft); }
+.quiz button.quiz-opt.correct { border-color: var(--good); background: #eaf6ec; }
+.quiz button.quiz-opt.incorrect { border-color: var(--bad); background: #fdeef0; }
+.quiz .quiz-explain {
+  display: none;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--border);
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+.quiz.answered .quiz-explain { display: block; }
+
+/* Footer nav between lessons */
+.lesson-nav {
+  font-family: var(--sans);
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3.5rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.ask-teacher {
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  margin-top: 2.5rem;
+  padding: 0.9rem 1.2rem;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+}
+
+@media print {
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .quiz, .ask-teacher, .lesson-nav { display: none; }
+  a { color: var(--ink); text-decoration: none; }
+}

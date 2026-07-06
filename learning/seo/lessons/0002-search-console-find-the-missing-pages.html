@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2 — Search Console: Find the Missing Pages</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>Search Console: Find the Missing Pages</h1>
+<p class="lesson-meta">Lesson 0002 · SEO for MathFlow · ~15 min reading + ~15 min hands-on · builds on <a href="0001-how-google-sees-mathflow.html">Lesson 1</a></p>
+
+<p>Your <code>site:omml2mathml.com</code> search found <strong>one indexed page — the homepage</strong>.
+The converter itself, the page your whole site exists for, is invisible to Google. Before fixing
+anything we need to know <em>why</em>, and guessing is not diagnosing. This lesson gives you the
+instrument panel: <strong>Google Search Console</strong>.</p>
+
+<div class="callout key">
+  <span class="callout-title">Key idea</span>
+  A <code>site:</code> search is a quick approximation — it shows roughly what's indexed, but not <em>why</em>
+  pages are missing. <strong>Search Console is the ground truth</strong>: Google's free dashboard that tells
+  site owners exactly how Google crawls, indexes, and serves their site, page by page and query by query.
+  Every indexing question from now on gets answered there, not by guessing.
+</div>
+
+<h2>What Search Console gives you</h2>
+
+<table>
+  <tr><th>Report</th><th>Answers</th><th>Pipeline stage</th></tr>
+  <tr><td><strong>URL Inspection</strong></td><td>"What does Google know about this exact URL?" — crawled? indexed? when? why not?</td><td>1 &amp; 2</td></tr>
+  <tr><td><strong>Pages (indexing report)</strong></td><td>Which URLs are indexed vs excluded, grouped by reason ("Discovered — currently not indexed", "Crawled — not indexed", "noindex", …)</td><td>2</td></tr>
+  <tr><td><strong>Performance</strong></td><td>Which real queries showed your site, with impressions, clicks, and average position</td><td>3</td></tr>
+  <tr><td><strong>Sitemaps</strong></td><td>Submit your sitemap (once you have one — future lesson) and see if Google could read it</td><td>1</td></tr>
+</table>
+
+<p>One vocabulary pair you'll see constantly in the Performance report:
+an <em>impression</em> is your page being <em>shown</em> in someone's results;
+a <em>click</em> is them choosing it. Impressions without clicks usually means a weak
+title/snippet — which is exactly MathFlow's current situation.</p>
+
+<h2>Proving you own the site</h2>
+
+<p>Google won't show this data to strangers, so step one is <em>verification</em> — proving
+omml2mathml.com is yours. Two property types exist
+(<a href="https://developers.google.com/search/docs/monitor-debug/search-console-start">official guide</a>):</p>
+
+<ul>
+  <li><strong>Domain property</strong> (<code>omml2mathml.com</code>) — covers every subdomain and both http/https. Verified with a <strong>DNS TXT record</strong> at your domain registrar. <span class="good">Recommended</span> — you own the domain, and one verification covers everything forever.</li>
+  <li><strong>URL-prefix property</strong> (<code>https://omml2mathml.com/</code>) — verified by an HTML file upload or a meta tag. Simpler if DNS access is awkward, but covers only that exact prefix.</li>
+</ul>
+
+<div class="callout gotcha">
+  <span class="callout-title">Gotcha</span>
+  DNS changes can take minutes to a day to propagate. If verification fails right after you add
+  the TXT record, don't undo anything — wait and hit "Verify" again later. The record must
+  <em>stay</em> in your DNS permanently, or verification silently lapses.
+</div>
+
+<h2>Why might /converter be missing? (hypotheses to test, not conclusions)</h2>
+
+<p>From Lesson 1's audit, the suspects — in the order URL Inspection will let you check them:</p>
+<ol>
+  <li><strong>Google never discovered it well.</strong> There's no sitemap, so Google only finds pages by following links. The homepage does link to <code>/converter</code>… but discovery ≠ indexing.</li>
+  <li><strong>Discovered but not crawled/indexed yet.</strong> New, small sites with few external links get a small crawl budget and Google can be slow and picky. Very common; the report literally has a category "Discovered — currently not indexed".</li>
+  <li><strong>Something blocks or demotes it</strong> — an accidental <code>noindex</code>, a redirect to login, an error for Googlebot. Less likely given the repo audit, but this is why we inspect instead of assume.</li>
+</ol>
+
+<h2>Try it now — this week's 15 applied minutes</h2>
+
+<div class="callout try-it">
+  <span class="callout-title">Hands-on</span>
+  <ol>
+    <li>Go to <a href="https://search.google.com/search-console">search.google.com/search-console</a> and add a <strong>Domain property</strong> for <code>omml2mathml.com</code>. Copy the TXT record it gives you into your DNS (wherever the domain is registered), then verify.</li>
+    <li>Once in, open <strong>URL Inspection</strong> (top search bar) and inspect <code>https://omml2mathml.com/converter</code>. Read the verdict: is it "URL is not on Google"? What reason does it give under "Page indexing"?</li>
+    <li>If it says the page is crawlable and there's no blocker, click <strong>Request Indexing</strong> — a legitimate nudge for individual URLs.</li>
+    <li>Check the <strong>Pages</strong> report and note what each non-indexed URL is excluded for.</li>
+  </ol>
+  Bring the URL Inspection verdict for <code>/converter</code> to the next session — it picks our fix:
+  sitemap first, internal linking, or removing a blocker.
+</div>
+
+<h2>Check yourself</h2>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">Search Console's Performance report shows a query got 400 impressions and 2 clicks for your page. What does that most directly tell you?</p>
+  <button class="quiz-opt">Shown often, rarely chosen — snippet weak</button>
+  <button class="quiz-opt">Google is failing to index the page</button>
+  <button class="quiz-opt">The query volume is too low to matter</button>
+  <p class="quiz-explain">Impressions mean Google is already showing the page (stages 1–2 are fine, and stage 3 at least surfaces it). People seeing it and not clicking points at the title and snippet — the page's "ad copy" in the results. Indexing failure would mean zero impressions.</p>
+</div>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">URL Inspection says /converter is "Discovered — currently not indexed". What does that mean?</p>
+  <button class="quiz-opt">A noindex tag is blocking Google's crawler</button>
+  <button class="quiz-opt">The page returned errors when Google fetched it</button>
+  <button class="quiz-opt">Google knows the URL, hasn't prioritized crawling it</button>
+  <p class="quiz-explain">"Discovered — currently not indexed" means Google has the URL in its to-do list but hasn't fetched (or has fetched and deferred) it — typical for small new sites. A noindex or a fetch error would each be named explicitly as different statuses. The usual remedies: sitemap, stronger internal links, and patience.</p>
+</div>
+
+<h2>Go deeper</h2>
+<p><strong>Primary source for this lesson:</strong>
+<a href="https://developers.google.com/search/docs/monitor-debug/search-console-start">Get started with Search Console</a> (Google Search Central) — short, official, and includes the developer-focused tour of URL Inspection and the indexing reports.</p>
+
+<div class="ask-teacher">
+  <strong>Questions?</strong> Ask your teacher — especially if verification fights you (DNS records are a
+  common stumbling point) or if URL Inspection shows a status not covered here. Bring the /converter
+  verdict to the next session.
+</div>
+
+<nav class="lesson-nav">
+  <span>← <a href="0001-how-google-sees-mathflow.html">Lesson 1: How Google Sees MathFlow</a></span>
+  <span>Next: decided by your URL Inspection verdict</span>
+</nav>
+
+</body>
+</html>

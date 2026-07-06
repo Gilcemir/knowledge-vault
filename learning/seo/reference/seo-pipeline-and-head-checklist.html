@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reference — Search Pipeline &amp; Head-Tag Checklist</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1>Search Pipeline &amp; Head-Tag Checklist</h1>
+<p class="lesson-meta">Reference · compressed from <a href="../lessons/0001-how-google-sees-mathflow.html">Lesson 1</a> · print-friendly</p>
+
+<h2>The pipeline (diagnose in this order)</h2>
+<table>
+  <tr><th>Stage</th><th>Question</th><th>Diagnostic tool</th><th>Common fixes</th></tr>
+  <tr><td><strong>1 Crawl</strong></td><td>Can Google reach it?</td><td>Search Console → URL Inspection; server logs</td><td>Internal links, sitemap, unblock robots.txt, fix 5xx</td></tr>
+  <tr><td><strong>2 Index</strong></td><td>Did Google store it?</td><td><code>site:domain</code>; URL Inspection → coverage</td><td>Remove stray noindex, fix canonicals, improve thin content</td></tr>
+  <tr><td><strong>3 Serve</strong></td><td>Why isn't it winning?</td><td>Search Console → Performance (queries, impressions, position)</td><td>Titles/descriptions matching search language, content depth, links, structured data</td></tr>
+</table>
+
+<h2>Exclusion mechanisms — don't mix these up</h2>
+<table>
+  <tr><th>Mechanism</th><th>Stops crawling</th><th>Stops indexing</th><th>Use for</th></tr>
+  <tr><td><code>robots.txt</code></td><td class="good">Yes</td><td class="bad">No — linked URLs can still be indexed</td><td>Crawl-traffic control (bulk, low-value paths)</td></tr>
+  <tr><td><code>&lt;meta name="robots" content="noindex"&gt;</code> / <code>X-Robots-Tag</code></td><td class="bad">No (must stay crawlable to be seen)</td><td class="good">Yes</td><td>Login, register, admin, profile pages</td></tr>
+  <tr><td>Omit from sitemap</td><td class="bad">No</td><td class="bad">No</td><td>Nothing — sitemap is a discovery hint, not exclusion</td></tr>
+</table>
+
+<h2>The &lt;head&gt; skeleton every indexable page needs</h2>
+<pre><code>&lt;title&gt;Primary phrase in the searcher's words — Brand&lt;/title&gt;
+&lt;meta name="description" content="150–160 chars: what the page does + why click."&gt;
+&lt;link rel="canonical" href="https://domain.com/this-page"&gt;
+
+&lt;!-- localized sites: every version lists ALL versions + itself (bidirectional) --&gt;
+&lt;link rel="alternate" hreflang="pt-BR" href="https://domain.com/pt/pagina"&gt;
+&lt;link rel="alternate" hreflang="en"    href="https://domain.com/en/page"&gt;
+&lt;link rel="alternate" hreflang="x-default" href="https://domain.com/en/page"&gt;
+
+&lt;!-- social preview (Open Graph) --&gt;
+&lt;meta property="og:title" content="…"&gt;
+&lt;meta property="og:description" content="…"&gt;
+&lt;meta property="og:image" content="https://domain.com/og.png"&gt;
+
+&lt;!-- structured data: for a free web tool --&gt;
+&lt;script type="application/ld+json"&gt;
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "MathFlow",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Web",
+  "offers": { "@type": "Offer", "price": "0" }
+}
+&lt;/script&gt;</code></pre>
+
+<p>Sources: <a href="https://developers.google.com/search/docs/fundamentals/how-search-works">How Search works</a> ·
+<a href="https://developers.google.com/search/docs/crawling-indexing/robots/intro">robots.txt intro</a> ·
+<a href="https://developers.google.com/search/docs/specialty/international/localized-versions">hreflang</a> ·
+<a href="https://developers.google.com/search/docs/appearance/structured-data/software-app">Software App structured data</a></p>
+
+</body>
+</html>
