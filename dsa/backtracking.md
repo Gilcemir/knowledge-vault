@@ -2,6 +2,16 @@
 
 Notes and gotchas collected while studying backtracking. Language-agnostic pattern; examples in Python. Grows as I go.
 
+## Mental model — reason about the current call, before recursing
+
+Trying to picture the whole recursion tree at once is what makes backtracking feel hard. Instead, reason locally about *one call*: "I just arrived at a node — what must happen **here**, before I recurse?" Everything interesting happens at the top of the function, before the loop over children:
+
+1. **Is this node an answer?** Subsets: yes, always → `res.append(path[:])` unconditionally, first line.
+2. **Is this node a dead end?** Combination Sum: the running total overshot the target → no descendant can fix it → `return`. Subsets has no such check *precisely because* every node is an answer — there is nothing to short-circuit.
+3. **Which children do I even generate?** Skip a duplicate sibling (`i > start and nums[i] == nums[i - 1]`), or `break` a sorted tail that can't fit.
+
+Once the current node is handled, the recursive call takes care of the entire subtree below — you don't have to think about it. If you find yourself mentally simulating three levels deep, come back to the node in front of you and ask those three questions.
+
 ## The start-index decision — `i` vs `i + 1`
 
 In combination-style backtracking, the single parameter that controls "can I reuse an element?" is what you pass as `start` in the recursive call:
@@ -80,6 +90,40 @@ class Solution:
 
 - `i == start` → first choice of this level = the *continuation* of the previous copy (deeper in the tree). Duplicate allowed.
 - `i > start` → a *sibling* branch at the same level that would rebuild an already-explored subtree. Skip it.
+
+## Subsets — no base case with `return`; every node is an answer
+
+Subsets / Subsets II (LC 78/90): the instinct, by analogy with other backtracking problems, is to look for a short-circuit condition (`if ...: return`) as the base case. Here there isn't one. Unlike Combination Sum (which returns when the sum overshoots the target) or constrained permutations, in subsets **every node of the recursion tree is already a valid subset**. That's why the first line of the function is `res.append(path[:])` — the current state always counts as an answer; there is nothing to prune.
+
+Why an explicit `return` is redundant: `if start == len(nums): return` breaks nothing, but does nothing — when `start == len(nums)`, `range(start, len(nums))` is already empty, the `for` doesn't iterate, and the function returns on its own after the append. Placing the `return` *before* the append would be worse: it would drop the full subset.
+
+**Rule of thumb:** the base case is implicit in the `for` that runs dry. If every node is an answer → append at the top of the function, no `return`. Only use a pruning `return` when there is a state from which continuing is provably useless (sum overshot, constraint violated).
+
+### Subsets II (LC 90) — minimal example
+
+```python
+class Solution:
+    def subsetsWithDup(self, nums: List[int]) -> List[List[int]]:
+        res = []
+
+        nums.sort()                       # required for the sibling-dedup skip
+
+        def solve(path: list[int], start: int) -> None:
+            res.append(path[:])           # every node is valid — no return
+
+            for i in range(start, len(nums)):
+                if i > start and nums[i] == nums[i - 1]:
+                    continue              # duplicate SIBLING at this level — already explored
+
+                path.append(nums[i])
+                solve(path, i + 1)
+                path.pop()
+
+        solve([], 0)
+        return res
+```
+
+Contrast — when the `return` *does* exist: Combination Sum → `if total > target: return`. There, continuing past the overshoot is provably useless, so pruning applies.
 
 ## Sorting — correctness prerequisite vs pruning bonus
 
