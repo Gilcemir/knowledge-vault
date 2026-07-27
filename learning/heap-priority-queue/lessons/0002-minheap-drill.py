@@ -14,26 +14,29 @@ If you are stuck, ask for a hint — you will get the smallest hint that unblock
 """
 
 
+from collections.abc import Iterable
+
+
 class MinHeap:
-    def __init__(self):
+    def __init__(self) -> None:
         # The heap is just a flat list. Index math does the rest:
         #   parent(i) = (i - 1) // 2      left(i) = 2*i + 1      right(i) = 2*i + 2
-        self._data = []
+        self._data: list[int] = []
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._data)
 
-    def peek(self):
-        if self.__len__() == 0:
+    def peek(self) -> int:
+        if len(self) == 0:
             raise IndexError('peek from empty heap')
         return self._data[0]
 
-    def push(self, item):
-        next_idx = self.__len__()
+    def push(self, item: int) -> None:
+        next_idx = len(self)
         self._data.append(item)
         self._sift_up(next_idx)
 
-    def _sift_up(self, idx):
+    def _sift_up(self, idx: int) -> None:
         while idx > 0:
             parent_idx = (idx - 1) // 2
             if self._data[idx] < self._data[parent_idx]:
@@ -44,8 +47,8 @@ class MinHeap:
             idx = parent_idx
 
 
-    def _sift_down(self, idx):
-        l = self.__len__()
+    def _sift_down(self, idx: int) -> None:
+        l = len(self)
         if l == 0:
             return
 
@@ -53,24 +56,24 @@ class MinHeap:
             lc = 2 * idx + 1 if 2 * idx + 1 < l else None
             rc = 2 * idx + 2 if 2 * idx + 2 < l else None
 
+            # No `elif rc is not None` branch: rc == lc + 1, so a node can never
+            # have a right child without a left one. The tree fills left-to-right.
             candidate = None
             if lc is not None and rc is not None:
                 candidate = lc if self._data[lc] < self._data[rc] else rc
                 candidate = candidate if self._data[candidate] < self._data[idx] else None
             elif lc is not None and self._data[lc] < self._data[idx]:
                 candidate = lc
-            elif rc is not None and self._data[rc] < self._data[idx]:
-                candidate = rc
 
-            if not candidate:
+            if candidate is None:
                 break
 
             self._data[candidate], self._data[idx] = self._data[idx], self._data[candidate]
             idx = candidate
 
     
-    def pop(self):
-        if self.__len__() == 0:
+    def pop(self) -> int:
+        if len(self) == 0:
             raise IndexError('pop from empty heap')
 
         self._data[0], self._data[-1] = self._data[-1], self._data[0]
@@ -81,9 +84,9 @@ class MinHeap:
         return popped        
     
     @classmethod
-    def heapify(cls, items):
-        pq = MinHeap()
-        pq._data = items[:]
+    def heapify(cls, items: Iterable[int]) -> "MinHeap":
+        pq = cls()
+        pq._data = list(items)
         n = len(pq._data) // 2 - 1
         for i in range(n, -1, -1):
             pq._sift_down(i)
