@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 2 — Sift Down &amp; Build Your Own Heap</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>Sift Down &amp; Build Your Own Heap</h1>
+<p class="lesson-meta">Lesson 2 · ~30 min (lesson 10 min + drill 20 min) · <a href="0001-the-array-that-thinks-its-a-tree.html">← Lesson 1</a> · <a href="../reference/heap-cheat-sheet.html">cheat sheet</a></p>
+
+<p><strong>By the end of this lesson</strong> you will have written a working <code>MinHeap</code> from scratch — push, pop, peek, heapify — and know why <code>heapify</code> costs O(n) rather than O(n log n).</p>
+
+<div class="callout key">
+  <span class="callout-title">You already own half of this</span>
+  You traced <code>4, 8, 2, 6, 1</code> → <code>[1, 2, 4, 8, 6]</code> cold, on paper. That is <strong>sift-up</strong>, and it needs no more teaching. This lesson is about its mirror image — <strong>sift-down</strong> — and then about turning both into code.
+</div>
+
+<h2>1. The symmetry</h2>
+<p>Every heap operation is one of two walks along a single root-to-leaf path:</p>
+
+<table>
+  <tr><th></th><th>Sift <em>up</em></th><th>Sift <em>down</em></th></tr>
+  <tr><td>Used by</td><td><code>push</code></td><td><code>pop</code>, <code>heapify</code></td></tr>
+  <tr><td>Starts at</td><td>the last index</td><td>index 0 (or any node)</td></tr>
+  <tr><td>Compares against</td><td>the <strong>parent</strong> (1 comparison)</td><td>the <strong>smaller of two children</strong> (2 comparisons)</td></tr>
+  <tr><td>Stops when</td><td>parent ≤ item, or index 0 reached</td><td>item ≤ both children, or a leaf reached</td></tr>
+</table>
+
+<p>Sift-down is the harder of the two, for exactly two reasons — and both are where implementations break.</p>
+
+<h3>Trap 1: you must pick the <em>smaller</em> child</h3>
+<p>Going up there is only one parent, so there is no choice to make. Going down there are two candidates, and you must swap with the smaller one. Swap with the larger and you have just made a big value the parent of a small one — the heap property is broken and the bug surfaces many operations later, far from its cause.</p>
+
+<h3>Trap 2: a node may have only a left child</h3>
+<p>Because the last level fills left-to-right, exactly one node in the whole tree can have a lone left child. Code that blindly reads <code>data[2*i + 2]</code> raises <code>IndexError</code> — or worse, in a language without bounds checking, reads garbage. Always check <code>right &lt; len(data)</code> before comparing children.</p>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">While sifting down, you must always swap the node with…</p>
+  <button class="quiz-opt">Its left child always</button>
+  <button class="quiz-opt">Its smaller child value</button>
+  <button class="quiz-opt">Its larger child value</button>
+  <p class="quiz-explain">Swapping with the larger child would place a bigger value above a smaller sibling, breaking the parent ≤ child rule on the other branch. The smaller child is the only safe promotion.</p>
+</div>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">In a heap of size n, nodes with no children start at index…</p>
+  <button class="quiz-opt">n minus one</button>
+  <button class="quiz-opt">n divided four</button>
+  <button class="quiz-opt">n floor-divided two</button>
+  <p class="quiz-explain">Index <code>n//2</code> is the first leaf: its left child would be <code>2*(n//2)+1 ≥ n</code>, which does not exist. So the entire second half of the array is leaves — a fact the next section exploits.</p>
+</div>
+
+<h2>2. Why <code>heapify</code> is O(n), not O(n log n)</h2>
+<p>You could build a heap from <code>n</code> items with <code>n</code> pushes: O(n log n). But there is a better way, and it hinges on the fact you just answered: <strong>half the array is already leaves</strong>, and a single node is trivially a valid heap.</p>
+
+<p>So: take the raw array as-is, and sift <em>down</em> every non-leaf node, walking <strong>backwards</strong> from index <code>n//2 - 1</code> to <code>0</code>. Going backwards matters — when you fix node <code>i</code>, both of its subtrees are already valid heaps, which is exactly the precondition sift-down needs.</p>
+
+<p>Now count the work. Sift-down's cost is bounded by the node's <em>height</em>, not the tree's. And the tree is bottom-heavy:</p>
+
+<table>
+  <tr><th>Level</th><th>Node count</th><th>Max sift-down cost each</th></tr>
+  <tr><td>leaves (bottom)</td><td>~n/2</td><td>0</td></tr>
+  <tr><td>one above</td><td>~n/4</td><td>1</td></tr>
+  <tr><td>two above</td><td>~n/8</td><td>2</td></tr>
+  <tr><td>root</td><td>1</td><td>log n</td></tr>
+</table>
+
+<p>The expensive nodes are rare and the cheap nodes are everywhere. Summing <code>height × count</code> over all levels gives <code>n · Σ(h / 2^h)</code>, and that series converges to 2 — so the total is <strong>O(n)</strong> (<a href="https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/resources/lecture-8-binary-heaps/">MIT 6.006, Lecture 8</a>; formal proof in <a href="https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/">CLRS §6.3</a>).</p>
+
+<div class="callout key">
+  <span class="callout-title">Why this matters for interviews</span>
+  This is the difference between an O(n + k log n) answer and an O(n log n) one on top-k problems. Saying <em>"heapify is linear, so I pay O(n) once instead of O(n log n)"</em> out loud is a strong signal. You will use this in <strong>Lesson 4</strong>.
+</div>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">Building a heap from a list of n items costs, at best…</p>
+  <button class="quiz-opt">O of n</button>
+  <button class="quiz-opt">O of n log n</button>
+  <button class="quiz-opt">O of log n</button>
+  <p class="quiz-explain">Bottom-up <code>heapify</code> is linear because most nodes sit near the bottom and barely move. A loop of n pushes would be O(n log n) — same result, worse cost.</p>
+</div>
+
+<h2>3. The drill — write the heap</h2>
+<p>Knowledge is done; now the skill. Open the drill file and fill in the four TODOs:</p>
+
+<pre><code>python3 lessons/0002-minheap-drill.py</code></pre>
+
+<p>It ships with a test harness that gives you immediate feedback, including a 300-trial randomized stress test against Python's own <code>heapq</code>. Right now everything reports <em>not implemented</em>. Your job is six green lines.</p>
+
+<div class="callout try-it">
+  <span class="callout-title">Try it — 20 minutes</span>
+  <ol>
+    <li><a href="0002-minheap-drill.py">Open <code>0002-minheap-drill.py</code></a> and implement <code>peek</code>, <code>push</code>, <code>pop</code>, and <code>heapify</code>.</li>
+    <li>Do <strong>not</strong> import <code>heapq</code> in your implementation — the harness imports it only to check you.</li>
+    <li>Factor out a private <code>_sift_down(i)</code> helper. Both <code>pop</code> and <code>heapify</code> need it; writing it twice is how the two traps above sneak in twice.</li>
+    <li>Run the file after each method. Watch <code>..</code> turn into <code>ok</code>.</li>
+    <li>When all six pass, read <a href="https://github.com/python/cpython/blob/main/Lib/heapq.py">CPython's <code>heapq.py</code></a> and find one thing it does differently from yours.</li>
+  </ol>
+  <p>Stuck? Ask your teacher for a hint. You will get the smallest hint that unblocks you — never the answer.</p>
+</div>
+
+<div class="callout gotcha">
+  <span class="callout-title">Gotcha — your array may differ from heapq's, and that's fine</span>
+  If you compare your internal array against <code>heapq</code>'s after a pop, they will sometimes disagree. This is <em>not</em> a bug. CPython's <code>_siftup</code> walks all the way down the minimum-child path and then bubbles the item back up — a different route to a valid heap. Verified empirically over 20,000 random pops: the <strong>popped value always matches</strong>, both arrays are <strong>always valid heaps</strong>, and they hold the <strong>same elements</strong> — but the arrangement differs in roughly 10% of cases. This is why the harness checks the <em>heap property</em> and the <em>popped sequence</em>, never array equality. Any array satisfying the two rules is a legitimate heap.
+</div>
+
+<h2>4. Retrieval check (no peeking at Lesson 1)</h2>
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">You <code>pop</code> from <code>[2, 5, 3, 9, 6]</code>. Which value moves to index 0 first?</p>
+  <button class="quiz-opt">3, the smaller child</button>
+  <button class="quiz-opt">6, the final element</button>
+  <button class="quiz-opt">5, the leftmost child</button>
+  <p class="quiz-explain">Pop always starts by moving the <em>last</em> element to the root — that is the only removal that keeps the tree complete. <em>Then</em> it sifts down, and only then does the smaller child (3) come into play.</p>
+</div>
+
+<div class="callout key">
+  <span class="callout-title">Primary source</span>
+  Watch <a href="https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/resources/lecture-8-binary-heaps/">MIT 6.006 Lecture 8 — Binary Heaps</a> (~50 min, or skim the notes). It derives everything above rigorously, including the O(n) build-heap argument. Optional but excellent if the linear-heapify claim still feels like a magic trick.
+</div>
+
+<div class="ask-teacher">
+  <strong>Stuck or curious?</strong> Ask your teacher (the agent). Good questions for this lesson: "why does going backwards matter in heapify?", "what happens if I sift down forwards instead?", "how would this change for a max-heap?"
+</div>
+
+<div class="lesson-nav">
+  <span><a href="0001-the-array-that-thinks-its-a-tree.html">← Lesson 1: The Array That Thinks It's a Tree</a></span>
+  <span>Next: Lesson 3 — <code>heapq</code> fluency &amp; the max-heap trick</span>
+</div>
+
+</body>
+</html>

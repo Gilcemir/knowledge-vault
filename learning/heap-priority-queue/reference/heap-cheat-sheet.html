@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heap Cheat Sheet</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1>Binary Heap — Cheat Sheet</h1>
+<p class="lesson-meta">Reference · grows as the track progresses · <a href="../NOTES.md">track plan</a></p>
+
+<h2>The two rules</h2>
+<p>A <strong>binary heap</strong> is an array that encodes a binary tree obeying two invariants:</p>
+<ol>
+  <li><strong>Shape</strong>: the tree is <em>complete</em> — every level full, except possibly the last, which fills left to right. No holes.</li>
+  <li><strong>Order (heap property)</strong>: in a <em>min-heap</em>, every parent ≤ its children. In a <em>max-heap</em>, every parent ≥ its children. Siblings have <em>no</em> order between them.</li>
+</ol>
+<p>Consequence: the root (index <code>0</code>) is always the minimum (min-heap) or maximum (max-heap). Nothing else is sorted.</p>
+
+<h2>Index math (0-based array)</h2>
+<table>
+  <tr><th>Relation</th><th>Formula</th><th>Example (i = 4)</th></tr>
+  <tr><td>Parent of <code>i</code></td><td><code>(i - 1) // 2</code></td><td><code>1</code></td></tr>
+  <tr><td>Left child of <code>i</code></td><td><code>2*i + 1</code></td><td><code>9</code></td></tr>
+  <tr><td>Right child of <code>i</code></td><td><code>2*i + 2</code></td><td><code>10</code></td></tr>
+  <tr><td>Leaf nodes</td><td>indices <code>n//2 … n-1</code></td><td>—</td></tr>
+</table>
+
+<h2>Operations &amp; costs</h2>
+<table>
+  <tr><th>Operation</th><th>Cost</th><th>How</th></tr>
+  <tr><td>Peek min/max</td><td><strong>O(1)</strong></td><td>Read index 0</td></tr>
+  <tr><td>Push</td><td><strong>O(log n)</strong></td><td>Append at end, <em>sift up</em> until parent is smaller</td></tr>
+  <tr><td>Pop min/max</td><td><strong>O(log n)</strong></td><td>Swap root with last, remove last, <em>sift down</em> the new root</td></tr>
+  <tr><td>Build heap from n items</td><td><strong>O(n)</strong></td><td><code>heapq.heapify(list)</code> — cheaper than n pushes (O(n log n))</td></tr>
+  <tr><td>Search arbitrary value</td><td><strong>O(n)</strong></td><td>Heaps are <em>not</em> for searching</td></tr>
+</table>
+<p>Why O(log n)? A complete binary tree with n nodes has height ⌊log₂ n⌋ — a sift walks at most one root-to-leaf path.</p>
+
+<h2>The two sift walks</h2>
+<table>
+  <tr><th></th><th>Sift up (<code>push</code>)</th><th>Sift down (<code>pop</code>, <code>heapify</code>)</th></tr>
+  <tr><td>Start</td><td>last index</td><td>index 0 (or any non-leaf)</td></tr>
+  <tr><td>Compare with</td><td>parent — 1 candidate</td><td><strong>smaller</strong> of two children</td></tr>
+  <tr><td>Stop when</td><td>parent ≤ item, or at root</td><td>item ≤ both children, or at a leaf</td></tr>
+</table>
+<div class="callout gotcha">
+  <span class="callout-title">Two classic bugs</span>
+  (1) Sifting down and swapping with the <em>larger</em> child — breaks the property on the other branch.
+  (2) Reading <code>data[2*i+2]</code> without checking <code>right &lt; n</code> — one node in the tree can have a lone left child.
+</div>
+
+<h3>Pop, traced on <code>[1, 3, 9, 7, 5]</code></h3>
+<pre><code>save 1 (the answer)
+move last (5) to root, shrink  → [5, 3, 9, 7]
+sift down: children 3 and 9 → smaller is 3; 5 &gt; 3 → swap
+                               → [3, 5, 9, 7]
+5 now at index 1: only child is 7; 5 &lt; 7 → stop
+returns 1, heap = [3, 5, 9, 7]</code></pre>
+
+<h3>Why <code>heapify</code> is O(n)</h3>
+<p>Sift down every non-leaf, <strong>backwards</strong> from index <code>n//2 - 1</code> to <code>0</code> (backwards so both subtrees are already valid heaps). Cost is bounded by each node's <em>height</em>, and the tree is bottom-heavy: ~n/2 leaves cost 0, ~n/4 cost 1, ~n/8 cost 2. The sum <code>n · Σ(h/2^h)</code> converges → <strong>O(n)</strong>. A loop of n pushes would be O(n log n).</p>
+
+<h2><code>heapq</code> quick API</h2>
+<p>Python's <a href="https://docs.python.org/3/library/heapq.html"><code>heapq</code></a> operates on a plain <code>list</code> and is <strong>min-heap only</strong>.</p>
+<pre><code>import heapq
+
+h = []                      # a heap is just a list
+heapq.heappush(h, item)     # O(log n)
+smallest = heapq.heappop(h) # O(log n)
+smallest = h[0]             # peek, O(1)
+
+nums = [7, 3, 9, 1, 5]
+heapq.heapify(nums)         # in-place, O(n)
+
+heapq.heappushpop(h, item)  # push then pop — faster than the pair
+heapq.heapreplace(h, item)  # pop then push — heap size unchanged
+
+heapq.nlargest(k, iterable)   # top-k, O(n log k)
+heapq.nsmallest(k, iterable)  # bottom-k, O(n log k)
+</code></pre>
+
+<div class="callout key">
+  <span class="callout-title">Max-heap in Python</span>
+  There is no max-heap flag. Push <code>-x</code> and negate on the way out — or push tuples <code>(-priority, item)</code>. Details in Lesson 3.
+</div>
+
+<h2>Patterns (unlocked as the track progresses)</h2>
+<table>
+  <tr><th>Pattern</th><th>Signal in the problem</th><th>Lesson</th></tr>
+  <tr><td>Top-K</td><td>"k largest / k closest / k most frequent"</td><td>L4</td></tr>
+  <tr><td>Greedy + heap</td><td>"always take the best available next"</td><td>L5</td></tr>
+  <tr><td>Heap + hashmap composition</td><td>"design a system that feeds sorted-ish data"</td><td>L6</td></tr>
+  <tr><td>Two heaps</td><td>"running median / balance two halves"</td><td>L7</td></tr>
+</table>
+
+<div class="ask-teacher">
+  Anything unclear? Ask your teacher (the agent) — open the workspace and ask away, in Portuguese or English.
+</div>
+
+</body>
+</html>
