@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 3 — heapq Fluency</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1><code>heapq</code> Fluency</h1>
+<p class="lesson-meta">Lesson 3 · ~30 min (lesson 12 min + drill 18 min) · <a href="0002-sift-down-and-build-your-own.html">← Lesson 2</a> · <a href="../reference/heap-cheat-sheet.html">cheat sheet</a></p>
+
+<p><strong>By the end of this lesson</strong> you will drive Python's <code>heapq</code> without thinking about it: max-heaps out of a min-only library, priorities attached to arbitrary payloads, and the two combined operations most people never learn.</p>
+
+<div class="callout key">
+  <span class="callout-title">You just built one of these</span>
+  Your <a href="0002-minheap-drill.py"><code>MinHeap</code></a> passes all six tests, stress test included. From here on you never write that code again — in an interview you say <em>"I'll use a heap"</em> and reach for <code>heapq</code>. This lesson is about the gap between <em>knowing how a heap works</em> and <em>typing the right four lines under pressure</em>.
+</div>
+
+<h2>1. The mental model: there is no heap object</h2>
+
+<p><code>heapq</code> is not a class. It is a set of functions that operate on a plain <code>list</code> you already own, maintaining the invariant you implemented by hand:</p>
+
+<pre><code>import heapq
+
+h: list[int] = []           # this is the heap. it is a list.
+heapq.heappush(h, 5)
+heapq.heappush(h, 1)
+smallest = h[0]             # peek — O(1), just indexing
+smallest = heapq.heappop(h) # O(log n)</code></pre>
+
+<p>Two consequences fall straight out of that:</p>
+<ul>
+  <li><code>len(h)</code>, <code>if h:</code>, iteration, slicing — all the list things still work. <code>if h:</code> is your emptiness check; <code>heappop</code> on an empty list raises <code>IndexError</code>.</li>
+  <li>Nothing stops you from mutating <code>h</code> directly and destroying the invariant. The library trusts you.</li>
+</ul>
+
+<div class="callout gotcha">
+  <span class="callout-title">Gotcha — heapify returns None</span>
+  <code>heapq.heapify(nums)</code> rearranges <code>nums</code> <strong>in place</strong> and returns <code>None</code>. Writing <code>h = heapq.heapify(nums)</code> silently hands you <code>None</code>, and the failure surfaces three lines later as <code>TypeError: object of type 'NoneType' has no len()</code>. Same shape of bug as <code>nums = nums.sort()</code>.
+</div>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q"><code>heapq.heapify(nums)</code> gives you back…</p>
+  <button class="quiz-opt">None, rearranging nums in-place</button>
+  <button class="quiz-opt">A new sorted list copy</button>
+  <button class="quiz-opt">The smallest element found</button>
+  <p class="quiz-explain">In-place, linear time, returns <code>None</code> — exactly like <code>list.sort()</code>. Bind the list first, heapify it second: <code>h = list(nums); heapq.heapify(h)</code>.</p>
+</div>
+
+<h2>2. The library is min-only. Negate.</h2>
+
+<p>There is no <code>max=True</code> flag. The standard move is to store <strong>negated</strong> values and negate again on the way out:</p>
+
+<pre><code>h: list[int] = []
+for x in nums:
+    heapq.heappush(h, -x)   # in goes -x
+largest = -heapq.heappop(h) # out comes x</code></pre>
+
+<p>It works because negation reverses the order of numbers: if <code>a &gt; b</code> then <code>-a &lt; -b</code>, so the "smallest negative" <em>is</em> the largest original. Two limits worth knowing:</p>
+
+<ul>
+  <li>It only works on things you can negate — <strong>numbers</strong>. Strings, tuples of strings, objects: no. For those, wrap them in a tuple with a numeric priority (next section), or push <code>(-priority, payload)</code>.</li>
+  <li>Forgetting one of the two negations is the single most common heap bug in Python. Negate on the way in <em>and</em> on the way out.</li>
+</ul>
+
+<div class="callout key">
+  <span class="callout-title">Python 3.14 added real max-heap functions — ignore them for now</span>
+  <code>heapify_max</code>, <code>heappush_max</code>, <code>heappop_max</code> and friends landed in <a href="https://docs.python.org/3/library/heapq.html">Python 3.14</a>. Your machine runs 3.9, and interview judges lag years behind. Learn the negation trick as the real answer; mention 3.14 only as a footnote if someone asks.
+</div>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">The negation trick fails outright when items are…</p>
+  <button class="quiz-opt">strings, which cannot be negated</button>
+  <button class="quiz-opt">floats, which lose their precision</button>
+  <button class="quiz-opt">tuples, which compare left-to-right</button>
+  <p class="quiz-explain"><code>-"abc"</code> is a <code>TypeError</code>. Floats negate fine and lose nothing; tuples of numbers can be negated element-wise, and left-to-right comparison is a feature you are about to exploit.</p>
+</div>
+
+<h2>3. Tuples: attaching a priority to anything</h2>
+
+<p>Python compares tuples <strong>lexicographically</strong> — first elements first, and only on a tie does it look at the second. That is exactly a priority queue:</p>
+
+<pre><code>heapq.heappush(h, (priority, payload))
+priority, payload = heapq.heappop(h)   # lowest priority number wins</code></pre>
+
+<p>And here is the trap that the <a href="https://docs.python.org/3/library/heapq.html">official docs devote a whole section to</a>:</p>
+
+<blockquote>Tuple comparison breaks for <code>(priority, task)</code> pairs if the priorities are equal and the tasks do not have a default comparison order.</blockquote>
+
+<p>When two priorities tie, Python moves on to element two and tries <code>task_a &lt; task_b</code>. If your payload is a custom object with no <code>__lt__</code>, you get:</p>
+
+<pre><code>TypeError: '&lt;' not supported between instances of 'Task' and 'Task'</code></pre>
+
+<p>What makes this vicious is that it is <strong>data-dependent</strong>. Your code runs fine on every test case with distinct priorities and explodes the first time two collide.</p>
+
+<h3>The fix: a monotonic tie-breaker in the middle</h3>
+
+<p>Insert a strictly increasing counter as element two. No two entries ever share one, so comparison stops there and never touches the payload:</p>
+
+<pre><code>import itertools
+
+counter = itertools.count()
+heapq.heappush(h, (priority, next(counter), task))</code></pre>
+
+<p>You get two things for the price of one: the crash is impossible, and equal-priority items now come out <strong>in insertion order</strong> — a FIFO tie-break, which is usually what you wanted anyway. In a loop you already have an index, so <code>enumerate</code> does the same job without importing anything.</p>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">Pushing <code>(2, task_a)</code> then <code>(2, task_b)</code> raises TypeError because…</p>
+  <button class="quiz-opt">Python compares the two tasks</button>
+  <button class="quiz-opt">Python forbids duplicated priority values</button>
+  <button class="quiz-opt">Python requires three-element list entries</button>
+  <p class="quiz-explain">Equal first elements send tuple comparison to element two — the payloads. Duplicate priorities are perfectly legal; three-element entries are the <em>fix</em>, not the requirement.</p>
+</div>
+
+<h2>4. Two combined operations worth memorising</h2>
+
+<p>Both do a push and a pop in one pass instead of two, and they are <em>not</em> the same function:</p>
+
+<table>
+  <tr><th></th><th><code>heappushpop(h, x)</code></th><th><code>heapreplace(h, x)</code></th></tr>
+  <tr><td>Order</td><td>push <code>x</code>, <em>then</em> pop</td><td>pop, <em>then</em> push <code>x</code></td></tr>
+  <tr><td>Returns</td><td>the smaller of <code>x</code> and <code>h[0]</code></td><td>the old <code>h[0]</code> — possibly larger than <code>x</code></td></tr>
+  <tr><td>If <code>x</code> is the new minimum</td><td>hands <code>x</code> straight back, heap untouched</td><td>still evicts the old root</td></tr>
+  <tr><td>Empty heap</td><td>fine — returns <code>x</code></td><td><code>IndexError</code></td></tr>
+</table>
+
+<p>Concretely, on <code>h = [2, 7, 5]</code> with <code>x = 1</code>: <code>heappushpop</code> returns <code>1</code> and leaves the heap alone, while <code>heapreplace</code> returns <code>2</code> and the heap becomes <code>[1, 7, 5]</code>. Same inputs, different answers. The docs put it plainly: <em>"The value returned may be larger than the item added. If that isn't desired, consider using <code>heappushpop()</code> instead."</em></p>
+
+<h2>5. <code>nlargest</code> and <code>nsmallest</code></h2>
+
+<pre><code>heapq.nlargest(3, nums)                      # → list, descending
+heapq.nsmallest(3, people, key=lambda p: p.age)</code></pre>
+
+<p>They take a <code>key=</code>, like <code>sorted()</code>, and they run in <strong>O(n log k)</strong> — cheaper than sorting when <code>k</code> is small. The docs are refreshingly honest about the boundaries: for large <code>k</code>, plain <code>sorted()</code> is faster; for <code>k == 1</code>, use <code>min()</code>/<code>max()</code>; and if you are calling them repeatedly, build a real heap instead.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">Interview caution</span>
+  <code>nlargest</code> is a one-liner for problems whose whole point is the heap. Reaching for it can read as dodging the question. Know it, use it in real code, but in an interview say what it costs and offer to write the loop underneath.
+</div>
+
+<h2>6. The drill</h2>
+
+<p>Three parts, ~18 minutes. Part A is the one that builds retention:</p>
+
+<pre><code>python3 learning/heap-priority-queue/lessons/0003-heapq-drill.py</code></pre>
+
+<div class="callout try-it">
+  <span class="callout-title">Try it</span>
+  <ol>
+    <li><a href="0003-heapq-drill.py">Open <code>0003-heapq-drill.py</code></a>.</li>
+    <li><strong>Part A — predict.</strong> Four scenarios. Work each out <em>on paper</em> with the sift rules from Lesson 2 and write the literal into <code>PREDICTIONS</code>. Do not run the code first; you would learn nothing.</li>
+    <li><strong>Part B — <code>descending()</code>.</strong> The negation trick, with sorting banned. The harness reads your source to check.</li>
+    <li><strong>Part C — <code>dispatch()</code>.</strong> Priority order, ties by arrival, payloads that raise <code>TypeError</code> if your heap ever compares them.</li>
+    <li>Run it. Twelve green lines.</li>
+  </ol>
+  <p>Stuck? Ask for a hint — you get the smallest one that unblocks you, never the answer.</p>
+</div>
+
+<h2>7. Retrieval check</h2>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q"><code>heapreplace(h, x)</code> can return a value…</p>
+  <button class="quiz-opt">larger than the pushed x</button>
+  <button class="quiz-opt">smaller than every heap element</button>
+  <button class="quiz-opt">equal to the heap length</button>
+  <p class="quiz-explain">It pops <em>before</em> pushing, so it always evicts the old root even when <code>x</code> is smaller. <code>heappushpop</code> is the one that returns the smaller of the two.</p>
+</div>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">In a min-heap array, the final element is…</p>
+  <button class="quiz-opt">not necessarily the largest value</button>
+  <button class="quiz-opt">always going to be largest</button>
+  <button class="quiz-opt">always exactly the median value</button>
+  <p class="quiz-explain">The heap property constrains parents against children, nothing else. The maximum is guaranteed to be <em>some</em> leaf, but not the last slot. Finding it is O(n) — heaps are one-ended.</p>
+</div>
+
+<div class="callout key">
+  <span class="callout-title">Primary source</span>
+  Read the <a href="https://docs.python.org/3/library/heapq.html"><code>heapq</code> module documentation</a> end to end — it is short. The two essays at the bottom, <strong>"Priority Queue Implementation Notes"</strong> and <strong>"Theory"</strong>, are the highest-value pages on heaps in the whole Python docs, and the tie-breaker pattern in section 3 comes straight from them.
+</div>
+
+<div class="ask-teacher">
+  <strong>Stuck or curious?</strong> Ask your teacher (the agent). Good questions for this lesson: "why did scenarios A and B give different arrays from the same numbers?", "how do I remove an arbitrary item from a heapq heap?", "what if I need to change an item's priority after pushing it?"
+</div>
+
+<div class="lesson-nav">
+  <span><a href="0002-sift-down-and-build-your-own.html">← Lesson 2: Sift Down &amp; Build Your Own Heap</a></span>
+  <span>Next: your first problem — LC 703, solo</span>
+</div>
+
+</body>
+</html>

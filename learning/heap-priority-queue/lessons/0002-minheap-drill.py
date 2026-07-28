@@ -3,7 +3,8 @@ Lesson 2 drill — build a MinHeap from scratch.
 
 HOW TO USE THIS FILE
     1. Fill in the four TODOs below. Do NOT import heapq in your implementation.
-    2. Run it:   python3 lessons/0002-minheap-drill.py
+    2. Run it, from the repo root:
+           python3 learning/heap-priority-queue/lessons/0002-minheap-drill.py
     3. The test harness at the bottom gives you immediate pass/fail feedback,
        including a random stress test against Python's own heapq.
     4. Only after all tests pass, compare your code with the real thing:

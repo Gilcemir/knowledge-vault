@@ -78,14 +78,42 @@ heapq.heapify(nums)         # in-place, O(n)
 heapq.heappushpop(h, item)  # push then pop — faster than the pair
 heapq.heapreplace(h, item)  # pop then push — heap size unchanged
 
-heapq.nlargest(k, iterable)   # top-k, O(n log k)
-heapq.nsmallest(k, iterable)  # bottom-k, O(n log k)
+heapq.nlargest(k, iterable, key=fn)   # top-k, O(n log k)
+heapq.nsmallest(k, iterable, key=fn)  # bottom-k, O(n log k)
 </code></pre>
 
-<div class="callout key">
-  <span class="callout-title">Max-heap in Python</span>
-  There is no max-heap flag. Push <code>-x</code> and negate on the way out — or push tuples <code>(-priority, item)</code>. Details in Lesson 3.
-</div>
+<h3>Three gotchas</h3>
+<ul>
+  <li><code>heapify</code> is <strong>in place and returns <code>None</code></strong>. <code>h = heapq.heapify(nums)</code> gives you <code>None</code>.</li>
+  <li><code>heappop</code>/<code>heapreplace</code> on an empty list raise <code>IndexError</code>. Guard with <code>if h:</code>.</li>
+  <li><code>h[0]</code> is the minimum; <code>h[-1]</code> is <strong>not</strong> the maximum. Finding the max is O(n).</li>
+</ul>
+
+<h3><code>heappushpop</code> vs <code>heapreplace</code></h3>
+<table>
+  <tr><th></th><th><code>heappushpop(h, x)</code></th><th><code>heapreplace(h, x)</code></th></tr>
+  <tr><td>Order</td><td>push, then pop</td><td>pop, then push</td></tr>
+  <tr><td>Returns</td><td>smaller of <code>x</code> and <code>h[0]</code></td><td>old <code>h[0]</code> — may exceed <code>x</code></td></tr>
+  <tr><td><code>x</code> is new min</td><td>returns <code>x</code>, heap unchanged</td><td>evicts the root anyway</td></tr>
+  <tr><td>Empty heap</td><td>returns <code>x</code></td><td><code>IndexError</code></td></tr>
+</table>
+<pre><code>h = [2, 7, 5];  heapq.heappushpop(h, 1)  # → 1,  h stays [2, 7, 5]
+h = [2, 7, 5];  heapq.heapreplace(h, 1)  # → 2,  h becomes [1, 7, 5]</code></pre>
+
+<h2>Max-heap in Python</h2>
+<p>No max-heap flag before 3.14. Negate on the way in <em>and</em> on the way out:</p>
+<pre><code>heapq.heappush(h, -x)
+largest = -heapq.heappop(h)</code></pre>
+<p>Works only on numbers (<code>-"abc"</code> is a <code>TypeError</code>). For objects, push <code>(-priority, item)</code>.
+Python 3.14 added <code>heapify_max</code> / <code>heappush_max</code> / <code>heappop_max</code> / <code>heappushpop_max</code> / <code>heapreplace_max</code> — do not rely on them in interviews.</p>
+
+<h2>Priorities on arbitrary payloads</h2>
+<p>Tuples compare <strong>lexicographically</strong> — element 0 first, element 1 only on a tie. So <code>(priority, payload)</code> is a priority queue for free… until two priorities tie and Python tries to compare the payloads:</p>
+<pre><code>TypeError: '&lt;' not supported between instances of 'Task' and 'Task'</code></pre>
+<p>Data-dependent bug: passes every test with distinct priorities, explodes on the first collision. Fix with a strictly increasing tie-breaker in the middle, so comparison never reaches element 2:</p>
+<pre><code>counter = itertools.count()
+heapq.heappush(h, (priority, next(counter), task))   # or enumerate's index</code></pre>
+<p>Bonus: equal priorities now pop in insertion order (FIFO). Source: <a href="https://docs.python.org/3/library/heapq.html">Priority Queue Implementation Notes</a>.</p>
 
 <h2>Patterns (unlocked as the track progresses)</h2>
 <table>
