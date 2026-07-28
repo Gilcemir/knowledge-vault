@@ -15,7 +15,7 @@ Lessons lead up to problems; problems are solved solo on LeetCode. Order within 
 | L1 | The array that thinks it's a tree (heap anatomy, index math) | lesson | ✅ delivered |
 | L2 | Sift-down + build your own MinHeap (skeleton `lessons/0002-minheap-drill.py` + test harness) | lesson + coding drill | ✅ delivered |
 | L3 | `heapq` fluency: min-only, negation trick, tuples, pushpop vs replace (drill `lessons/0003-heapq-drill.py`) | lesson + drill | ✅ delivered |
-| P1 | Kth Largest Element in a Stream (LC 703, Easy) | problem | ⬜ |
+| P1 | Kth Largest Element in a Stream (LC 703, Easy) | problem | 🔄 handed over 2026-07-27 |
 | P2 | Last Stone Weight (LC 1046, Easy) | problem | ⬜ |
 | L4 | The Top-K pattern: size-k heap vs heapify-all, custom priorities | lesson | ⬜ |
 | P3 | K Closest Points to Origin (LC 973, Medium) | problem | ⬜ |
@@ -39,4 +39,6 @@ Plan is adaptive — reorder/merge if Gil moves faster or slower than expected. 
 - Encourage predicting `heapq` internal array states before running code — cheap desirable difficulty. L3's drill formalises this as a `PREDICTIONS` dict checked by the harness; reuse the pattern.
 - L3 deliberately teaches `heappushpop`/`heapreplace` as *API mechanics only*, with no top-k framing — the size-k-heap pattern is L4's job and would spoil P1 (LC 703). Keep it that way if L3 is ever revised.
 - Verified 2026-07-27: local Python is **3.9.6**. `list[int]` annotations are fine; `X | Y` unions are not (3.10+). No 3.14 max-heap functions available.
+- L4 can skip the "why not just sort" motivation — Gil raised the `heapify` vs push-loop build-cost question himself at the end of L3 (LR-0004). Open L4 directly at the size-k heap, and fold in `nlargest`/`nsmallest` (the last unmet `heapq` success criterion).
+- Watch for Python-level slips distinct from topic misconceptions — L3's only bug was storing an `itertools.count()` object instead of `next(counter)`. Naming the symptom ("this output is alphabetical") was enough; no explanation needed.
 - Verified 2026-07-27: L3 drill scenarios A/B — pushing `[18, 23, 3, 19, 2]` one at a time gives `[2, 3, 18, 23, 19]`, while `heapify` on the same list gives `[2, 18, 3, 19, 23]`. Both valid; textbook sift-down agrees with CPython on both. Roughly 47% of random 5–7 element lists show this divergence.
