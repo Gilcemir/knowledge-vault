@@ -134,6 +134,8 @@ heapq.heappush(h, (priority, next(counter), task))</code></pre>
 <pre><code>heapq.nlargest(3, nums)                      # → list, descending
 heapq.nsmallest(3, people, key=lambda p: p.age)</code></pre>
 
+<p>Read the contract carefully, because nothing here is a heap operation: <code>n</code> is positional, the second argument is <strong>any iterable</strong> (not a heap, and it is not turned into one), nothing is mutated, and what comes back is a <strong>new list, already ordered</strong> — descending for <code>nlargest</code>, ascending for <code>nsmallest</code>. Under the hood each one keeps a private heap of <code>n</code> entries; Lesson 4 unpacks that.</p>
+
 <p>They take a <code>key=</code>, like <code>sorted()</code>, and they run in <strong>O(n log k)</strong> — cheaper than sorting when <code>k</code> is small. The docs are refreshingly honest about the boundaries: for large <code>k</code>, plain <code>sorted()</code> is faster; for <code>k == 1</code>, use <code>min()</code>/<code>max()</code>; and if you are calling them repeatedly, build a real heap instead.</p>
 
 <div class="callout gotcha">

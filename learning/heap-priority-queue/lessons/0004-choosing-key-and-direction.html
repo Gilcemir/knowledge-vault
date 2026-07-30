@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 4 — Choosing the Key, Choosing the Direction</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>Choosing the Key, Choosing the Direction</h1>
+<p class="lesson-meta">Lesson 4 · ~30 min (lesson 12 min + drill 18 min) · <a href="0003-heapq-fluency.html">← Lesson 3</a> · <a href="../reference/heap-cheat-sheet.html">cheat sheet</a></p>
+
+<p>A heap is a <strong>selector</strong>, not a sorter. You already own the machine — you built one in <a href="0002-sift-down-and-build-your-own.html">Lesson 2</a> and drove the library one in <a href="0003-heapq-fluency.html">Lesson 3</a> — and you have pointed it at two problems. What is left is the part that happens <em>before</em> you type: every top-k problem collapses into two decisions.</p>
+
+<ol>
+  <li><strong>The key</strong> — what are you comparing by?</li>
+  <li><strong>The direction</strong> — which end are you throwing away?</li>
+</ol>
+
+<p>Get those two right and the code is four lines you already know. Get either wrong and no amount of <code>heapq</code> fluency saves you.</p>
+
+<div class="callout key">
+  <span class="callout-title">What this lesson does not do</span>
+  It does not re-teach the bounded size-k heap. You derived that yourself on LC 703 without a hint. This lesson is about the two choices you made <em>implicitly</em> there, so that next time you make them on purpose — plus the cost accounting that made <a href="../learning-records/0006-heapify-cost-misattributed-under-composition.md">P2's complexity answer</a> right for the wrong reason.
+</div>
+
+<h2>1. The key is a function, not a field</h2>
+
+<p>A priority is rarely sitting in the data waiting to be read. Usually it is <em>computed</em> from the payload. Python gives you three places to put that computation:</p>
+
+<table>
+  <tr><th>Where</th><th>Looks like</th><th>Use when</th></tr>
+  <tr><td><code>key=</code></td><td><code>nlargest(k, items, key=f)</code></td><td>One-shot selection over a finished collection</td></tr>
+  <tr><td>Decorated tuple</td><td><code>(f(x), tiebreak, x)</code></td><td>A heap <em>you</em> push to and pop from over time</td></tr>
+  <tr><td>Wrapper class</td><td><code>@dataclass(order=True)</code></td><td>The payload is an object you push repeatedly</td></tr>
+</table>
+
+<p><code>key=</code> exists only on <code>nlargest</code>/<code>nsmallest</code> (and <code>sorted</code>, <code>min</code>, <code>max</code>). There is <strong>no</strong> <code>key=</code> on <code>heappush</code>. The moment you own the heap, you own the decoration — that is why the tuple pattern from Lesson 3 keeps coming back.</p>
+
+<p>The third option comes straight out of the <a href="https://docs.python.org/3/library/heapq.html">docs</a>, and it is worth knowing because it makes the payload uncomparable <em>by construction</em>:</p>
+
+<pre><code>from dataclasses import dataclass, field
+from typing import Any
+
+@dataclass(order=True)
+class PrioritizedItem:
+    priority: int
+    item: Any = field(compare=False)</code></pre>
+
+<p><code>field(compare=False)</code> excludes <code>item</code> from the generated <code>__lt__</code>, so two equal priorities compare equal instead of exploding. Same problem the counter solved in Lesson 3, different tool.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">Gotcha — the heap compares what you pushed, not what you meant</span>
+  You push <code>(ms, endpoint)</code> because you want to order by <code>ms</code>. Then you write a guard like <code>if new_entry &gt; h[0]</code>, and on a tie Python quietly moves to element two and settles it <strong>by endpoint name</strong> — a decision you never asked for. If your comparison is supposed to be about the key alone, compare the key alone: <code>if new_ms &gt; h[0][0]</code>. The tuple is for the heap's internal ordering; your guards are yours.
+</div>
+
+<h3>Monotone replacement: the same order, cheaper</h3>
+
+<p>If <code>f</code> is <strong>strictly increasing</strong> over the values you actually have, then ordering by <code>f(key)</code> and ordering by <code>key</code> give the same result. So you may freely swap in any cheaper <code>f</code>-equivalent: drop a constant divisor, skip a root, keep integers instead of floats. The comparisons cannot tell the difference.</p>
+
+<p>That cuts the other way too — a "harmless" transform that <em>loses</em> information silently merges items that were never equal. Ranking by <code>wins / games</code>, verified on Python 3.14:</p>
+
+<pre><code>a = (10**17, 3 * 10**17)        # exactly 1/3
+b = (10**17 + 1, 3 * 10**17)    # strictly larger than 1/3
+
+a[0] / a[1] == b[0] / b[1]              # True   ← float division collided
+Fraction(*a) == Fraction(*b)            # False
+Fraction(*a) &lt;  Fraction(*b)            # True   ← exact, and still just a key</code></pre>
+
+<p>Both are monotone in intent; only one is monotone in fact. <a href="https://docs.python.org/3/library/fractions.html"><code>Fraction</code></a> is the exact key when a ratio matters, and cross-multiplication is the fast one.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">Monotone only on <em>your</em> domain</span>
+  Squaring is strictly increasing for non-negative values — and folds the number line in half otherwise. Sorting <code>[-5, -1, 0, 2, 3]</code> by <code>x*x</code> gives <code>[0, -1, 2, 3, -5]</code>. Before you replace a key, ask what range the data actually spans.
+</div>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">Ordering by <code>f(key)</code> matches ordering by <code>key</code> whenever <code>f</code> is…</p>
+  <button class="quiz-opt">cheaper to compute than key</button>
+  <button class="quiz-opt">strictly increasing on the data</button>
+  <button class="quiz-opt">applied after the heap pops</button>
+  <p class="quiz-explain">Only monotonicity preserves order. Cheapness is <em>why</em> you bother, not <em>whether</em> it is valid — and a transform applied after popping cannot influence an order that was already decided.</p>
+</div>
+
+<h2>2. The direction — derive it, don't memorise it</h2>
+
+<p>Here is the whole argument, and it is three sentences long. You are allowed to hold only <code>k</code> items. A new one arrives, and if it deserves a slot then one resident has to die. Which resident?</p>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">Keeping only the k largest, the element you must see instantly is the…</p>
+  <button class="quiz-opt">largest of the ones kept</button>
+  <button class="quiz-opt">smallest of the ones dropped</button>
+  <button class="quiz-opt">smallest of the ones kept</button>
+  <p class="quiz-explain">The victim is always the weakest survivor, so that is the one you compare the newcomer against — and a heap gives you exactly one element for free: the root. Therefore the root must hold the smallest of the k largest.</p>
+</div>
+
+<p>That answer <em>is</em> the rule. The heap runs <strong>opposite</strong> to the selection, because the only cheap element is the root and the root has to be the next thing you throw away:</p>
+
+<table>
+  <tr><th>You want</th><th>Bounded heap of size k</th><th>Root holds</th><th>Admit the newcomer when</th></tr>
+  <tr><td>k largest</td><td><strong>min</strong>-heap</td><td>smallest of the kept</td><td><code>new &gt; root</code></td></tr>
+  <tr><td>k smallest</td><td><strong>max</strong>-heap (negate)</td><td>largest of the kept</td><td><code>new &lt; root</code></td></tr>
+</table>
+
+<p>The direction feels backwards the first few times. The check that unsticks it: name the element you want to be able to <em>evict</em> in O(1) — never the one you want to return.</p>
+
+<h3>Which is why <code>heapreplace</code> is the wrong verb here</h3>
+
+<p>Lesson 3 gave you the mechanics of <code>heappushpop</code> versus <code>heapreplace</code>. Now they have consequences.</p>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">Unconditional <code>heapreplace</code> on a full size-k heap can…</p>
+  <button class="quiz-opt">raise IndexError on full heaps</button>
+  <button class="quiz-opt">evict an element that belongs</button>
+  <button class="quiz-opt">grow the heap past k entries</button>
+  <p class="quiz-explain"><code>heapreplace</code> pops <em>before</em> it pushes, so it removes the root unconditionally — even when the newcomer is worse than everything you are holding. The size stays exactly k (that part is fine) and it never raises on a non-empty heap. What breaks is the <em>contents</em>: a value that does not belong in the top-k has displaced one that did.</p>
+</div>
+
+<p>So a bounded heap needs a decision before the mutation: either guard the call (<code>if new &gt; h[0]</code>), or use <code>heappushpop</code>, which pushes first and therefore hands the newcomer straight back when it does not qualify. Both work. They are not interchangeable on ties — see the gotcha in section 1, and Part B of the drill will hold you to it.</p>
+
+<h2>3. Cost, one phase at a time</h2>
+
+<div class="callout key">
+  <span class="callout-title">Why this section exists</span>
+  On P2 you answered O(n log n) — correct — and attributed the log factor to <code>heapify</code>, which has none. The total was right while the model underneath was wrong, and that is invisible from the total alone. The fix is mechanical, and it is the habit this lesson is really selling: <strong>write each phase separately, add them, then drop the smaller term.</strong> Never reason from one aggregate number.
+</div>
+
+<p>"Give me the k slowest of n requests" has at least three honest answers. Each is two phases:</p>
+
+<table>
+  <tr><th>Strategy</th><th>Phase 1</th><th>Phase 2</th></tr>
+  <tr><td><code>sort_all</code></td><td>sort all n by the key</td><td>take the last k</td></tr>
+  <tr><td><code>heapify_all</code></td><td>negate all n, <code>heapify</code></td><td>pop k times</td></tr>
+  <tr><td><code>bounded</code></td><td>one pass, heap capped at k</td><td>drain the k survivors</td></tr>
+</table>
+
+<p>Costing these is Part A of the drill, so the numbers are not here. What is here is the warning: <strong>one of the three beats the bounded heap on time for small k</strong>, and it is not the one most people would name. Do the accounting phase by phase and it falls out in a minute. Reason from the aggregate and you will get the folk answer.</p>
+
+<p>Two axes, not one, decide the winner in practice: time <em>and</em> peak memory. Keep them separate in your head.</p>
+
+<h2>4. When the heap is the wrong tool</h2>
+
+<p>The <a href="https://docs.python.org/3/library/heapq.html">docs</a> are unusually candid about their own functions:</p>
+
+<blockquote>The latter two functions perform best for smaller values of <em>n</em>. For larger values, it is more efficient to use the <code>sorted()</code> function. Also, when <code>n==1</code>, it is more efficient to use the built-in <code>min()</code> and <code>max()</code> functions. If repeated usage of these functions is required, consider turning the iterable into an actual heap.</blockquote>
+
+<p>Add two more boundaries the docs do not mention:</p>
+
+<ul>
+  <li><strong>Streams.</strong> <code>heapify</code> needs the whole collection at once. If items arrive over time and you must answer at any moment, the bounded heap is not merely cheaper on memory — it is the only one of the three that is <em>possible</em>. That is the reconciliation for section 3's puzzle.</li>
+  <li><strong>Quickselect</strong> finds the k-th element in O(n) <em>average</em> time, beating every heap strategy — with a worst case of O(n²) unless you fight for it. Out of scope for this track; know the name so an interviewer's "can you do better than the heap?" does not land cold.</li>
+</ul>
+
+<h2>5. <code>nlargest</code> / <code>nsmallest</code>, defined</h2>
+
+<p>Lesson 3 gave you the signature and the headline cost. The rest of this lesson leans on the full contract, so here it is:</p>
+
+<table>
+  <tr><th>Question</th><th>Answer</th></tr>
+  <tr><td>Signature</td><td><code>heapq.nlargest(n, iterable, key=None) -> list</code> — <code>n</code> is <strong>positional</strong>; there is no <code>k=</code></td></tr>
+  <tr><td>What it accepts</td><td><strong>Any iterable</strong> — list, tuple, generator, <code>dict.items()</code>. Not a heap.</td></tr>
+  <tr><td>What it returns</td><td>A <strong>brand-new list</strong>, already ordered: descending for <code>nlargest</code>, ascending for <code>nsmallest</code></td></tr>
+  <tr><td>What it mutates</td><td>Nothing. The input comes out untouched.</td></tr>
+</table>
+
+<h3>They do not operate on a heap — they build one</h3>
+
+<p>This is the sentence to hold on to. Your input is not a heap and is never turned into one. Internally the function decorates each item, keeps a <strong>private heap of exactly <code>n</code> entries</strong>, and <code>heapreplace</code>s as it walks the rest of the iterable. That is the bounded heap of section 2, in production form — which is precisely why Part B bans it. Reaching for <code>nlargest</code> there would skip the exercise.</p>
+
+<h3>The cost has two shortcuts the headline hides</h3>
+
+<p>O(n log k) is only the general path. CPython checks two cheaper cases first:</p>
+
+<table>
+  <tr><th>Case</th><th>What it actually runs</th><th>Cost</th></tr>
+  <tr><td><code>n == 1</code></td><td><code>max()</code> / <code>min()</code> — no heap at all</td><td>O(n)</td></tr>
+  <tr><td><code>n &gt;= len(iterable)</code></td><td><code>sorted(iterable, key=key, reverse=True)[:n]</code></td><td>O(n log n)</td></tr>
+  <tr><td>otherwise</td><td>bounded-heap pass, then a final sort of the k survivors</td><td>O(n log k) + O(k log k)</td></tr>
+</table>
+
+<p>That final sort of the survivors is <em>why</em> the result comes back ordered — a heap alone would not give you that. And note the second row: the docs' own advice from section 4 is applied to you by the function itself.</p>
+
+<div class="callout key">
+  <span class="callout-title">Python-specific?</span>
+  The <em>function</em> is — <code>heapq.nlargest</code> is stdlib sugar. The <em>algorithm</em> is not: bounded-heap selection is universal. C++ ships <code>std::partial_sort</code> and <code>std::nth_element</code>; Java and JavaScript ship nothing equivalent and you write the bounded heap by hand. Cite <code>nlargest</code> in a Python interview; say "size-k heap" everywhere else.
+</div>
+
+<h2>6. What decides a tie in <code>nlargest</code></h2>
+
+<p>The docs define these two by equivalence, which pins tie order exactly:</p>
+
+<blockquote>Equivalent to: <code>sorted(iterable, key=key, reverse=True)[:n]</code></blockquote>
+
+<p>Python's <code>sorted</code> is stable, so equal keys keep their original relative order — and <code>nlargest</code> is built to reproduce that, not just the multiset. Verified here on 3.14 over 2000 random inputs with heavy key collisions: <code>nlargest</code> and <code>nsmallest</code> matched the <code>sorted(...)[:n]</code> slice element for element, every time. Part C makes you predict it before you run it.</p>
+
+<p>It can promise that because the decoration from section 5 is not <code>(key, item)</code> but <code>(key, arrival_counter, item)</code>. On a tie the comparison moves to slot two and is settled by arrival order — never reaching the payload, which is the gotcha from section 1 solved properly. Which <em>way</em> the counter has to run for the earlier arrival to win is the decision Part B hands you, so it is not written down here.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">Do not carry that habit into your own heaps</span>
+  Stability is a promise of <code>nlargest</code>/<code>nsmallest</code>, not of heaps. A heap you build yourself has no tie order at all unless you put one there — that is the counter in slot two. The docs even say of their heapsort example: <em>"unlike <code>sorted()</code>, this implementation is not stable."</em>
+</div>
+
+<h2>7. The drill</h2>
+
+<pre><code>python3.14 learning/heap-priority-queue/lessons/0004-topk-drill.py</code></pre>
+
+<div class="callout try-it">
+  <span class="callout-title">Try it — ~18 min</span>
+  <ol>
+    <li><a href="0004-topk-drill.py">Open <code>0004-topk-drill.py</code></a>.</li>
+    <li><strong>Part A — cost accounting.</strong> Eleven cells, on paper, with concrete numbers (n = 10⁶, k = 10) so nothing is ambiguous. Phase by phase, then which phase survives. This is the part that repays the session.</li>
+    <li><strong>Part B — <code>top_k_slowest()</code>.</strong> Bounded heap; sorting and <code>nlargest</code> banned. The harness watches your heap's peak size and holds you to the tie rule.</li>
+    <li><strong>Part C — predict.</strong> Three <code>nlargest</code>/<code>nsmallest</code> calls. Write the literals down <em>before</em> running, as in Lesson 3.</li>
+    <li>Twenty green lines.</li>
+  </ol>
+  <p>Stuck? Ask for a hint — the smallest one that unblocks you, never the answer.</p>
+</div>
+
+<h2>8. Retrieval check</h2>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">Ordering by <code>x*x</code> reverses pairs when the values are…</p>
+  <button class="quiz-opt">identical, since squaring keeps equality</button>
+  <button class="quiz-opt">fractional, since squaring maps downward</button>
+  <button class="quiz-opt">negative, since squaring maps upward</button>
+  <p class="quiz-explain">Squaring is monotone only on non-negatives. Below zero it reverses: −5 &lt; −1, but 25 &gt; 1. Fractions shrink under squaring yet keep their order; equal values stay equal, harmlessly.</p>
+</div>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">A <code>key=</code> argument is accepted by <code>heapq</code>'s…</p>
+  <button class="quiz-opt">nlargest and nsmallest only</button>
+  <button class="quiz-opt">heappush and heappop too</button>
+  <button class="quiz-opt">heapify and heapreplace too</button>
+  <p class="quiz-explain">Only the two selection helpers take a <code>key</code>. Everything that mutates a heap compares the items exactly as you pushed them — so on those, the key has to be baked into the pushed value.</p>
+</div>
+
+<div class="callout key">
+  <span class="callout-title">Primary source</span>
+  Re-read the <a href="https://docs.python.org/3/library/heapq.html"><code>heapq</code> docs</a> — this time the <code>nlargest</code>/<code>nsmallest</code> entries and the <strong>Priority Queue Implementation Notes</strong>, which is where the <code>dataclass</code> wrapper in section 1 comes from. Then, <em>after</em> the drill and not before, read <a href="https://github.com/python/cpython/blob/main/Lib/heapq.py">CPython's own <code>nlargest</code></a>: it is the bounded heap you are about to write, in production form. Reading it first would just hand you Part B.
+</div>
+
+<div class="ask-teacher">
+  <strong>Stuck or curious?</strong> Ask your teacher (the agent). Good questions for this lesson: "if <code>heapify_all</code> is faster for small k, why would I ever write the bounded heap?", "how do I handle a key that can change after I push?", "when is the tuple better than the dataclass wrapper?"
+</div>
+
+<div class="lesson-nav">
+  <span><a href="0003-heapq-fluency.html">← Lesson 3: heapq Fluency</a></span>
+  <span>Next: LC 973, solo</span>
+</div>
+
+</body>
+</html>

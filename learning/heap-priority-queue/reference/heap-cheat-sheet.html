@@ -115,10 +115,88 @@ Python 3.14 added <code>heapify_max</code> / <code>heappush_max</code> / <code>h
 heapq.heappush(h, (priority, next(counter), task))   # or enumerate's index</code></pre>
 <p>Bonus: equal priorities now pop in insertion order (FIFO). Source: <a href="https://docs.python.org/3/library/heapq.html">Priority Queue Implementation Notes</a>.</p>
 
+<h2>Top-K: two decisions before you type</h2>
+<p>A heap is a <strong>selector</strong>, not a sorter. Every top-k problem is <em>the key</em> (what you compare by) and <em>the direction</em> (which end you throw away).</p>
+
+<h3>The direction: opposite to the selection</h3>
+<p>The only cheap element is the root, and the root must be the next thing you <strong>evict</strong> — never the thing you want to return.</p>
+<table>
+  <tr><th>You want</th><th>Bounded heap of size k</th><th>Root holds</th><th>Admit newcomer when</th></tr>
+  <tr><td>k largest</td><td><strong>min</strong>-heap</td><td>smallest of the kept</td><td><code>new &gt; root</code></td></tr>
+  <tr><td>k smallest</td><td><strong>max</strong>-heap (negate)</td><td>largest of the kept</td><td><code>new &lt; root</code></td></tr>
+</table>
+<p>Unguarded <code>heapreplace</code> breaks a bounded heap: it pops before pushing, so a newcomer <em>worse</em> than everything held still displaces a member of the top-k. Size stays k; contents go wrong. Guard the call, or use <code>heappushpop</code> (pushes first, hands the newcomer back when it does not qualify).</p>
+
+<h3>The key: three places to put it</h3>
+<table>
+  <tr><th>Where</th><th>Looks like</th><th>Use when</th></tr>
+  <tr><td><code>key=</code></td><td><code>nlargest(k, items, key=f)</code></td><td>One-shot selection over a finished collection</td></tr>
+  <tr><td>Decorated tuple</td><td><code>(f(x), tiebreak, x)</code></td><td>A heap you push to and pop from over time</td></tr>
+  <tr><td>Wrapper class</td><td><code>@dataclass(order=True)</code></td><td>The payload is an object you push repeatedly</td></tr>
+</table>
+<p>There is <strong>no <code>key=</code> on <code>heappush</code></strong> — only <code>nlargest</code>/<code>nsmallest</code> take one. Own the heap, own the decoration.</p>
+<pre><code>from dataclasses import dataclass, field
+from typing import Any
+
+@dataclass(order=True)
+class PrioritizedItem:
+    priority: int
+    item: Any = field(compare=False)   # excluded from __lt__</code></pre>
+
+<h3>Monotone replacement</h3>
+<p>If <code>f</code> is <strong>strictly increasing over the data you have</strong>, ordering by <code>f(key)</code> equals ordering by <code>key</code> — so swap in any cheaper equivalent (drop a constant divisor, skip a root, stay in ints). Two traps:</p>
+<ul>
+  <li>Monotone only on part of the domain: <code>sorted([-5,-1,0,2,3], key=lambda x: x*x)</code> → <code>[0,-1,2,3,-5]</code>. Squaring is monotone for x ≥ 0 only.</li>
+  <li>Lossy "monotone" transforms merge distinct items. <code>10**17/(3*10**17) == (10**17+1)/(3*10**17)</code> is <code>True</code> in floats; <code>Fraction</code> separates them correctly. Use <code>Fraction</code> (exact) or cross-multiplication (fast) for ratios.</li>
+</ul>
+
+<h3><code>nlargest</code> / <code>nsmallest</code>: the contract</h3>
+<p>Signature is <code>heapq.nlargest(n, iterable, key=None)</code> — <code>n</code> is <strong>positional</strong>, there is no <code>k=</code>. They take <strong>any iterable</strong> (list, tuple, generator, <code>dict.items()</code>), <strong>never mutate it</strong>, and return a <strong>new list already ordered</strong> — descending for <code>nlargest</code>, ascending for <code>nsmallest</code>.</p>
+<p>They do <em>not</em> operate on a heap: they build a private one of exactly <code>n</code> entries and <code>heapreplace</code> through the rest of the iterable. That is the bounded size-k heap, in stdlib form. Three cost paths, not one:</p>
+<table>
+  <tr><th>Case</th><th>What runs</th><th>Cost</th></tr>
+  <tr><td><code>n == 1</code></td><td><code>max()</code> / <code>min()</code>, no heap</td><td>O(n)</td></tr>
+  <tr><td><code>n &gt;= len(iterable)</code></td><td><code>sorted(...)[:n]</code></td><td>O(n log n)</td></tr>
+  <tr><td>otherwise</td><td>bounded pass, then sort the k survivors</td><td>O(n log k) + O(k log k)</td></tr>
+</table>
+<p>The final sort of the survivors is why the result comes back ordered — a heap alone would not give you that. The function is Python-specific; the algorithm is not (C++: <code>std::partial_sort</code> / <code>std::nth_element</code>; Java and JS: write it yourself). Say "size-k heap" outside Python.</p>
+
+<h3>Tie order</h3>
+<p>Docs define <code>nlargest</code> as <em>equivalent to</em> <code>sorted(iterable, key=key, reverse=True)[:n]</code> — and <code>sorted</code> is stable, so equal keys keep input order. Verified on 3.14 over 2000 collision-heavy inputs: element-for-element match. <strong>Your own heaps have no such promise</strong> — ties are undefined unless you put a counter in slot two.</p>
+<p>The <em>sign</em> of that counter is not taste — it follows from the direction of the heap. CPython decorates as <code>(key, counter, item)</code> and signs it so the later arrival lands on the side that gets thrown away:</p>
+<table>
+  <tr><th></th><th>Private heap</th><th>Root it evicts</th><th>Counter sequence</th></tr>
+  <tr><td><code>nlargest</code></td><td>min-heap of k</td><td>smallest kept</td><td><code>0, -1, -2, …</code></td></tr>
+  <tr><td><code>nsmallest</code></td><td>max-heap of k</td><td>largest kept</td><td><code>0, 1, 2, …</code></td></tr>
+</table>
+<p>Opposite signs, identical policy: earliest arrival survives. Derive the sign by asking <em>which extreme does my heap discard</em>, then make the newcomer that extreme. Only the relative order matters — the starting value is irrelevant and <code>-0 == 0</code> is not an edge case. <code>nlargest</code> also guards with a strict <code>if top &lt; k</code>, so an equal key never enters the heap at all: two independent mechanisms, same outcome.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">Compare the key, not the tuple</span>
+  You push <code>(ms, endpoint)</code> to order by <code>ms</code>, then write <code>if new &gt; h[0]</code> — and on a tie Python settles it by <em>endpoint name</em>, a decision you never asked for. Guards should read the key alone: <code>if new_ms &gt; h[0][0]</code>.
+</div>
+
+<h3>Three strategies, costed per phase</h3>
+<p>Never one aggregate number — cost each phase separately, then see which one survives. At <code>n = 1e6</code>, <code>k = 10</code>:</p>
+<table>
+  <tr><th>Strategy</th><th>Phase 1</th><th>Phase 2</th><th>Total</th><th>Extra memory</th></tr>
+  <tr><td>sort all</td><td>sort n by key — O(n log n)</td><td>slice last k — O(k)</td><td>O(n log n)</td><td>O(n)</td></tr>
+  <tr><td>heapify all</td><td>negate + <code>heapify</code> — O(n)</td><td>k pops, heap still size n — O(k log n)</td><td><strong>O(n)</strong></td><td>O(n)</td></tr>
+  <tr><td>bounded heap</td><td>n arrivals, heap capped at k — O(n log k)</td><td>drain the k survivors — O(k log k)</td><td>O(n log k)</td><td><strong>O(k)</strong></td></tr>
+</table>
+<p>Phase 1 dominates in all three — at k = 10, phase 2 is noise. The counter-intuitive winner on <strong>time</strong> is heapify-all: O(n) beats O(n log k), so the folk answer "the bounded heap is the fast one" is wrong on that axis. The bounded heap wins on <strong>memory</strong> (O(k) vs O(n)) and is the only one that survives a stream. Winning on the wrong axis is not winning.</p>
+
+<h3>When the heap is the wrong tool</h3>
+<ul>
+  <li>Large k → plain <code>sorted()</code>. k == 1 → <code>min()</code>/<code>max()</code>. Repeated calls → keep a real heap. (Straight from the docs.)</li>
+  <li><strong>Streaming</strong> → the bounded heap is not just cheaper, it is the only option: <code>heapify</code> needs the whole collection at once.</li>
+  <li><strong>Quickselect</strong> → O(n) average for the k-th element, O(n²) worst case. Know the name; out of scope here.</li>
+</ul>
+
 <h2>Patterns (unlocked as the track progresses)</h2>
 <table>
   <tr><th>Pattern</th><th>Signal in the problem</th><th>Lesson</th></tr>
-  <tr><td>Top-K</td><td>"k largest / k closest / k most frequent"</td><td>L4</td></tr>
+  <tr><td>Top-K</td><td>"k largest / k closest / k most frequent"</td><td>L4 ✅</td></tr>
   <tr><td>Greedy + heap</td><td>"always take the best available next"</td><td>L5</td></tr>
   <tr><td>Heap + hashmap composition</td><td>"design a system that feeds sorted-ish data"</td><td>L6</td></tr>
   <tr><td>Two heaps</td><td>"running median / balance two halves"</td><td>L7</td></tr>
