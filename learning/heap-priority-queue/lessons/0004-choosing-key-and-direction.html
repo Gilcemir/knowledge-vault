@@ -159,7 +159,7 @@ Fraction(*a) &lt;  Fraction(*b)            # True   ← exact, and still just a 
 
 <table>
   <tr><th>Question</th><th>Answer</th></tr>
-  <tr><td>Signature</td><td><code>heapq.nlargest(n, iterable, key=None) -> list</code> — <code>n</code> is <strong>positional</strong>; there is no <code>k=</code></td></tr>
+  <tr><td>Signature</td><td><code>heapq.nlargest(k, iterable, key=None) -> list</code> — the count is <strong>positional</strong>; there is no <code>k=</code> keyword</td></tr>
   <tr><td>What it accepts</td><td><strong>Any iterable</strong> — list, tuple, generator, <code>dict.items()</code>. Not a heap.</td></tr>
   <tr><td>What it returns</td><td>A <strong>brand-new list</strong>, already ordered: descending for <code>nlargest</code>, ascending for <code>nsmallest</code></td></tr>
   <tr><td>What it mutates</td><td>Nothing. The input comes out untouched.</td></tr>
@@ -167,20 +167,27 @@ Fraction(*a) &lt;  Fraction(*b)            # True   ← exact, and still just a 
 
 <h3>They do not operate on a heap — they build one</h3>
 
-<p>This is the sentence to hold on to. Your input is not a heap and is never turned into one. Internally the function decorates each item, keeps a <strong>private heap of exactly <code>n</code> entries</strong>, and <code>heapreplace</code>s as it walks the rest of the iterable. That is the bounded heap of section 2, in production form — which is precisely why Part B bans it. Reaching for <code>nlargest</code> there would skip the exercise.</p>
+<div class="callout gotcha">
+  <span class="callout-title">The <code>n</code> that is not your <code>n</code></span>
+  The stdlib spells the count parameter <code>n</code> — <code>nlargest(n, iterable)</code> in the docs. But in cost analysis <code>n</code> means <em>the size of the input</em>. Cross the two and the correct <code>O(n log k)</code> reads as <code>O(k log n)</code>, which is a different (and wrong) algorithm. This lesson always writes the count as <strong><code>k</code></strong> and reserves <code>n</code> for <code>len(iterable)</code>. Do the same rename in your head when you read the docs.
+</div>
+
+<p>This is the sentence to hold on to. Your input is not a heap and is never turned into one. Internally the function decorates each item, keeps a <strong>private heap of exactly <code>k</code> entries</strong>, and <code>heapreplace</code>s as it walks the rest of the iterable. That is the bounded heap of section 2, in production form — which is precisely why Part B bans it. Reaching for <code>nlargest</code> there would skip the exercise.</p>
 
 <h3>The cost has two shortcuts the headline hides</h3>
 
-<p>O(n log k) is only the general path. CPython checks two cheaper cases first:</p>
+<p>O(n log k) is only the general path — with <code>n = len(iterable)</code> and <code>k</code> the count you asked for. CPython checks two cheaper cases first:</p>
 
 <table>
   <tr><th>Case</th><th>What it actually runs</th><th>Cost</th></tr>
-  <tr><td><code>n == 1</code></td><td><code>max()</code> / <code>min()</code> — no heap at all</td><td>O(n)</td></tr>
-  <tr><td><code>n &gt;= len(iterable)</code></td><td><code>sorted(iterable, key=key, reverse=True)[:n]</code></td><td>O(n log n)</td></tr>
-  <tr><td>otherwise</td><td>bounded-heap pass, then a final sort of the k survivors</td><td>O(n log k) + O(k log k)</td></tr>
+  <tr><td><code>k == 1</code></td><td><code>max()</code> / <code>min()</code> — no heap at all</td><td>O(n)</td></tr>
+  <tr><td><code>k &gt;= n</code></td><td><code>sorted(iterable, key=key, reverse=True)[:k]</code></td><td>O(n log n)</td></tr>
+  <tr><td>otherwise</td><td>bounded-heap pass over n, then a final sort of the k survivors</td><td>O(n log k) + O(k log k)</td></tr>
 </table>
 
 <p>That final sort of the survivors is <em>why</em> the result comes back ordered — a heap alone would not give you that. And note the second row: the docs' own advice from section 4 is applied to you by the function itself.</p>
+
+<p>Read the general path off the source and the two factors stop being interchangeable. The first <code>k</code> elements are seeded with <code>[(elem, i) for i, elem in zip(range(k), it)]</code> and <code>heapify</code>'d — that is the <code>k</code>-sized heap. Then <code>for elem in it</code> walks the <em>remaining n − k</em> inputs, and each one that beats the root pays <code>log k</code>. The pass length is <code>n</code>; the <code>log</code> is of <code>k</code>. <strong><code>n log k</code>, never <code>k log n</code>.</strong></p>
 
 <div class="callout key">
   <span class="callout-title">Python-specific?</span>
@@ -193,7 +200,9 @@ Fraction(*a) &lt;  Fraction(*b)            # True   ← exact, and still just a 
 
 <blockquote>Equivalent to: <code>sorted(iterable, key=key, reverse=True)[:n]</code></blockquote>
 
-<p>Python's <code>sorted</code> is stable, so equal keys keep their original relative order — and <code>nlargest</code> is built to reproduce that, not just the multiset. Verified here on 3.14 over 2000 random inputs with heavy key collisions: <code>nlargest</code> and <code>nsmallest</code> matched the <code>sorted(...)[:n]</code> slice element for element, every time. Part C makes you predict it before you run it.</p>
+<p><em>Quoted verbatim from the docs, so that <code>n</code> is the <strong>count</strong> — the <code>k</code> of this lesson, not <code>len(iterable)</code>.</em></p>
+
+<p>Python's <code>sorted</code> is stable, so equal keys keep their original relative order — and <code>nlargest</code> is built to reproduce that, not just the multiset. Verified here on 3.14 over 2000 random inputs with heavy key collisions: <code>nlargest</code> and <code>nsmallest</code> matched the <code>sorted(...)[:k]</code> slice element for element, every time. Part C makes you predict it before you run it.</p>
 
 <p>It can promise that because the decoration from section 5 is not <code>(key, item)</code> but <code>(key, arrival_counter, item)</code>. On a tie the comparison moves to slot two and is settled by arrival order — never reaching the payload, which is the gotcha from section 1 solved properly. Which <em>way</em> the counter has to run for the earlier arrival to win is the decision Part B hands you, so it is not written down here.</p>
 

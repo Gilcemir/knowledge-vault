@@ -151,18 +151,23 @@ class PrioritizedItem:
 </ul>
 
 <h3><code>nlargest</code> / <code>nsmallest</code>: the contract</h3>
-<p>Signature is <code>heapq.nlargest(n, iterable, key=None)</code> — <code>n</code> is <strong>positional</strong>, there is no <code>k=</code>. They take <strong>any iterable</strong> (list, tuple, generator, <code>dict.items()</code>), <strong>never mutate it</strong>, and return a <strong>new list already ordered</strong> — descending for <code>nlargest</code>, ascending for <code>nsmallest</code>.</p>
-<p>They do <em>not</em> operate on a heap: they build a private one of exactly <code>n</code> entries and <code>heapreplace</code> through the rest of the iterable. That is the bounded size-k heap, in stdlib form. Three cost paths, not one:</p>
+<div class="callout gotcha">
+  <span class="callout-title">The <code>n</code> that is not your <code>n</code></span>
+  <code>heapq</code> spells the count parameter <code>n</code>: <code>nlargest(n, iterable)</code>. Everywhere else in cost analysis <code>n</code> means <em>the size of the input</em>. Those are different quantities, and crossing them turns the correct <code>O(n log k)</code> into the wrong <code>O(k log n)</code>. In this workspace the count is always written <strong><code>k</code></strong>. When you read the docs, mentally rename their <code>n</code> to <code>k</code> before you reason about cost.
+</div>
+<p>Signature is <code>heapq.nlargest(k, iterable, key=None)</code> — the count is <strong>positional</strong>, and there is no <code>k=</code> keyword (the stdlib calls the parameter <code>n</code>). They take <strong>any iterable</strong> (list, tuple, generator, <code>dict.items()</code>), <strong>never mutate it</strong>, and return a <strong>new list already ordered</strong> — descending for <code>nlargest</code>, ascending for <code>nsmallest</code>.</p>
+<p>They do <em>not</em> operate on a heap: they build a private one of exactly <code>k</code> entries and <code>heapreplace</code> through the rest of the iterable. That is the bounded size-k heap, in stdlib form. Below, <code>n = len(iterable)</code> and <code>k</code> = the count you asked for. Three cost paths, not one:</p>
 <table>
   <tr><th>Case</th><th>What runs</th><th>Cost</th></tr>
-  <tr><td><code>n == 1</code></td><td><code>max()</code> / <code>min()</code>, no heap</td><td>O(n)</td></tr>
-  <tr><td><code>n &gt;= len(iterable)</code></td><td><code>sorted(...)[:n]</code></td><td>O(n log n)</td></tr>
-  <tr><td>otherwise</td><td>bounded pass, then sort the k survivors</td><td>O(n log k) + O(k log k)</td></tr>
+  <tr><td><code>k == 1</code></td><td><code>max()</code> / <code>min()</code>, no heap</td><td>O(n)</td></tr>
+  <tr><td><code>k &gt;= n</code></td><td><code>sorted(...)[:k]</code></td><td>O(n log n)</td></tr>
+  <tr><td>otherwise</td><td>bounded pass over n, then sort the k survivors</td><td>O(n log k) + O(k log k)</td></tr>
 </table>
+<p>Where the <code>log</code> lives, in the general path: the pass is over <strong>n</strong> elements and each one that qualifies pays <code>log</code> of the <strong>private heap</strong>, which is size <strong>k</strong>. Hence <code>n log k</code> — never <code>k log n</code>. The source settles it in one line: <code>result = [(elem, i) for i, elem in zip(range(n), it)]</code> takes only the first <em>count</em> elements into the heap, then <code>for elem in it</code> streams the remaining input past it.</p>
 <p>The final sort of the survivors is why the result comes back ordered — a heap alone would not give you that. The function is Python-specific; the algorithm is not (C++: <code>std::partial_sort</code> / <code>std::nth_element</code>; Java and JS: write it yourself). Say "size-k heap" outside Python.</p>
 
 <h3>Tie order</h3>
-<p>Docs define <code>nlargest</code> as <em>equivalent to</em> <code>sorted(iterable, key=key, reverse=True)[:n]</code> — and <code>sorted</code> is stable, so equal keys keep input order. Verified on 3.14 over 2000 collision-heavy inputs: element-for-element match. <strong>Your own heaps have no such promise</strong> — ties are undefined unless you put a counter in slot two.</p>
+<p>Docs define <code>nlargest</code> as <em>equivalent to</em> <code>sorted(iterable, key=key, reverse=True)[:k]</code> — and <code>sorted</code> is stable, so equal keys keep input order. Verified on 3.14 over 2000 collision-heavy inputs: element-for-element match. <strong>Your own heaps have no such promise</strong> — ties are undefined unless you put a counter in slot two.</p>
 <p>The <em>sign</em> of that counter is not taste — it follows from the direction of the heap. CPython decorates as <code>(key, counter, item)</code> and signs it so the later arrival lands on the side that gets thrown away:</p>
 <table>
   <tr><th></th><th>Private heap</th><th>Root it evicts</th><th>Counter sequence</th></tr>
