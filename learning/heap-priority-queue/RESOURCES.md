@@ -14,6 +14,8 @@
   Simpler alternative visualizer; lets you drive operations step by step. Use for: hand-tracing practice checks.
 - [Code: CPython `heapq` source](https://github.com/python/cpython/blob/main/Lib/heapq.py)
   The real implementation of `_siftup`/`_siftdown`, heavily commented. Use for: comparing your from-scratch heap against production code (after writing your own — not before).
+- [Book: Jeff Erickson, _Algorithms_ — Chapter 4: Greedy Algorithms](https://jeffe.cs.illinois.edu/teaching/algorithms/book/04-greedy.pdf)
+  Free and complete (1st ed., June 2019; the author states it stays free indefinitely). §4.1 "Storing Files on Tape" and §4.2 "Scheduling Classes" are eight pages that prove two greedy algorithms correct by **exchange argument** — swap an adjacent out-of-order pair, show the cost drops (Lemma 4.1, p.160). Use for: why a greedy choice is *allowed*, as opposed to how to code it. Verified 2026-07-31.
 - [Videos: NeetCode YouTube channel](https://www.youtube.com/@NeetCode)
   Per-problem walkthroughs for all 7 roadmap problems. **Use only AFTER an honest solo attempt** — these contain full solutions, which violates the mission if watched early.
 

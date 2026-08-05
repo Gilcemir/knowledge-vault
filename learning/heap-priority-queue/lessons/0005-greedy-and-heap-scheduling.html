@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 5 — Greedy and the Heap: Scheduling Under a Gate</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>Greedy and the Heap: Scheduling Under a Gate</h1>
+<p class="lesson-meta">Lesson 5 · ~30 min (lesson 12 min + drill 18 min) · <a href="0004-choosing-key-and-direction.html">← Lesson 4</a> · <a href="../reference/heap-cheat-sheet.html">cheat sheet</a></p>
+
+<p>This lesson teaches exactly one new skill: <strong>running a heap when some items are not allowed yet</strong>. Every idea in it — the pattern, the loop, the cost argument, even the name "greedy" — exists to solve one concrete problem. So the problem comes first.</p>
+
+<h2>1. The problem</h2>
+
+<p>A shop receives orders during the day. Each order is a tuple <code>(arrival, priority, name)</code>:</p>
+
+<ul>
+  <li><code>arrival</code> — the tick at which the order arrives. Before this tick, the order does not exist as far as the worker is concerned.</li>
+  <li><code>priority</code> — how important it is. Bigger number = more important.</li>
+  <li><code>name</code> — just an identifier.</li>
+</ul>
+
+<p>A <strong>single worker</strong> handles one order per tick, and every order takes exactly one tick. The rule the worker follows, every time they are free:</p>
+
+<div class="callout key">
+  <span class="callout-title">The worker's rule</span>
+  Among the orders that <strong>have already arrived</strong> and are not yet handled, take the one with the <strong>highest priority</strong>. If nothing has arrived yet, wait.
+</div>
+
+<p><strong>Your job</strong> (this is the drill's Part B): given the list of orders, return the names in the order the worker handles them.</p>
+
+<p>One small input, worked in full. Take these three orders — note they are <em>not</em> given in arrival order:</p>
+
+<pre><code>orders = [(2, 4, "x"), (0, 1, "y"), (3, 8, "z")]</code></pre>
+
+<pre><code>tick 0: arrived so far: only y (arrival 0).      → handle y
+tick 1: x arrives at 2, z at 3 — nothing yet.    → wait
+tick 2: x has arrived.                            → handle x
+tick 3: z has arrived.                            → handle z
+
+answer: ["y", "x", "z"]</code></pre>
+
+<p>Notice what happened at tick 0: <code>z</code> has priority 8, by far the best in the input — and the worker handled <code>y</code>, priority 1. Not because the rule is subtle, but because <strong><code>z</code> did not exist yet</strong>. That is the whole novelty of this lesson: an item can be temporarily ineligible. It may well be the best thing in the input, and you still cannot take it yet.</p>
+
+<h2>2. Why the Lesson 4 reflex fails here</h2>
+
+<p>Your reflex after four lessons is: highest priority first → max-heap → push everything keyed by <code>-priority</code>, pop repeatedly. Try it on the example:</p>
+
+<pre><code>push all three:  heap root = z   (priority 8, the maximum)
+pop → z ???      but it is tick 0 and z only arrives at tick 3</code></pre>
+
+<p>The root of the heap is an order <em>from the future</em>. And a heap gives you <strong>no way to ask for the second-best</strong> without removing the first — peeking past an ineligible root is not an operation you have. So "the answer is at <code>h[0]</code>" breaks, for the first time in this track. The fix is structural, and it is small.</p>
+
+<h2>3. The fix: two containers and a clock</h2>
+
+<p>Keep ineligible items <em>out of the heap entirely</em>. They wait somewhere else, and they enter the heap only at the moment they become eligible.</p>
+
+<div class="callout key">
+  <span class="callout-title">The invariant</span>
+  The heap contains <strong>only items eligible right now</strong>. Everything else waits in a second container, tagged with the time it becomes eligible. Every bug in this pattern is a violation of that one sentence.
+</div>
+
+<p>Concretely: a <strong>waiting area</strong> (the orders, sorted by arrival — a list plus an index, or a <code>deque</code>) and the <strong>heap</strong> (only arrived orders, keyed by your greedy criterion). A clock variable <code>now</code>. The loop has three moves:</p>
+
+<pre><code>while work remains:
+    release  — move everything with arrival &lt;= now from waiting into the heap
+    if the heap is empty:
+        jump the clock to the next arrival time
+        continue
+    act      — pop the best, record it, now += 1</code></pre>
+
+<p>Here is the full trace on the example. This table is the lesson — if you can reproduce it on paper for a different input, you have the pattern:</p>
+
+<table>
+  <tr><th><code>now</code></th><th>waiting (by arrival)</th><th>heap (eligible only)</th><th>move</th><th>output so far</th></tr>
+  <tr><td>0</td><td>y(0) · x(2) · z(3)</td><td>—</td><td>release y</td><td>[]</td></tr>
+  <tr><td>0</td><td>x(2) · z(3)</td><td>y¹</td><td>act: pop y, now→1</td><td>[y]</td></tr>
+  <tr><td>1</td><td>x(2) · z(3)</td><td>—</td><td>heap empty → jump now→2</td><td>[y]</td></tr>
+  <tr><td>2</td><td>z(3)</td><td>x⁴</td><td>release x; act: pop x, now→3</td><td>[y, x]</td></tr>
+  <tr><td>3</td><td>—</td><td>z⁸</td><td>release z; act: pop z, now→4</td><td>[y, x, z]</td></tr>
+</table>
+
+<p>(Superscripts are priorities.) Two details worth pausing on:</p>
+
+<ul>
+  <li><strong>Release must be cheap.</strong> It is not a filter over the whole input each time. Because the waiting area is sorted by arrival, you walk it from the front and <em>stop at the first order that has not arrived</em> — each order is looked at once, ever. That is why sorting up front is not optional.</li>
+  <li><strong>The key and direction decisions from <a href="0004-choosing-key-and-direction.html">Lesson 4</a> come back unchanged.</strong> Highest priority first → max-heap → negate. Ties inside the heap are settled by what you put in the tuple, exactly as in Lesson 4.</li>
+</ul>
+
+<p>The gate here is <strong>one-way</strong>: once an order has arrived, it stays arrived. A gate can also <em>repeat</em> — an item becomes ineligible again each time you use it. Same two containers, same invariant; the only change is that <em>act</em> parks the item back in the waiting area instead of discarding it. That variation is deliberately left for you to build on the next problem.</p>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">In the two-container pattern, what may the heap contain?</p>
+  <button class="quiz-opt">Every item, with ineligible ones marked stale</button>
+  <button class="quiz-opt">Only items eligible to run right now</button>
+  <button class="quiz-opt">Only items whose cooldown has not expired</button>
+  <button class="quiz-opt">Every item that has ever been parked</button>
+  <p class="quiz-explain">Eligible items only — that is the whole point of the second container. Keeping ineligible items in the heap and marking them stale is a real technique for a different problem (deleting from a heap you cannot search), but here it puts an untouchable item at the root and you cannot see past it.</p>
+</div>
+
+<h2>4. How many times does that loop run?</h2>
+
+<p>Look at the loop again. There is no <code>for i in range(n)</code> to read the answer off — the iteration count depends on the data. To bound it you need a small proof technique, and it is the argument you did not reach for on <a href="../learning-records/0006-heapify-cost-misattributed-under-composition.md">P2</a>, where the loop ran "until fewer than two stones remain".</p>
+
+<h3>The recipe: find the shrinking quantity</h3>
+
+<p>Find a quantity <var>Q</var> such that:</p>
+
+<ol>
+  <li><var>Q</var> is a <strong>non-negative integer</strong> — it cannot descend forever;</li>
+  <li>every iteration <strong>decreases it by at least 1</strong>;</li>
+  <li>its <strong>starting value</strong> is bounded in terms of the input.</li>
+</ol>
+
+<p>Then the loop runs at most <var>Q</var><sub>start</sub> times. That is the entire technique; the work is in picking <var>Q</var>.</p>
+
+<p><strong>Worked on P2</strong>: let <var>Q</var> = stones in the heap. Each iteration pops two, pushes at most one — <var>Q</var> drops by 1 or 2, at least 1 either way. Starts at <var>n</var>, stops at <var>Q</var> ≤ 1: at most <var>n</var> − 1 iterations, each <code>O(log n)</code>, so <code>O(n log n)</code>. You gave that total on P2 without the argument; the argument is what tells you <em>which variable the bound is in</em> — and here that is about to matter.</p>
+
+<h3>The trap: an iteration that consumes nothing</h3>
+
+<p>Try <var>Q</var> = "orders not yet handled" on the scheduling loop. The <em>act</em> branch decreases it by one — fine. But look at the trace, row <code>now = 1</code>: the heap was empty, the worker waited, and <strong>nothing was handled</strong>. If the clock advances one tick at a time, that idle row repeats once per tick, <var>Q</var> unchanged, and condition (2) fails. Your bound is not a bound.</p>
+
+<p>Two ways out, and they produce the same output but wildly different costs:</p>
+
+<table>
+  <tr><th>Clock policy</th><th>Does every iteration consume an order?</th><th>Iterations bounded by</th></tr>
+  <tr><td>Advance one tick at a time</td><td>No — idle ticks consume nothing</td><td><strong>T, the last arrival time</strong></td></tr>
+  <tr><td>Jump straight to the next arrival</td><td>Yes — an idle jump is immediately followed by an <em>act</em></td><td><strong>n, the number of orders</strong></td></tr>
+</table>
+
+<p><var>T</var> came <em>with the data</em>; it has no relationship to <var>n</var>. Five orders whose arrivals run to 10<sup>9</sup> mean a tick-by-tick loop does 10<sup>9</sup> iterations of nothing. Nobody notices this reading the code — you notice it by trying to name <var>Q</var> and failing. The drill has a test built exactly on this.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">When no single Q works</span>
+  Sometimes an iteration decreases one quantity and leaves another alone, and vice versa. Then bound the <strong>sum</strong>: if every iteration decreases <var>Q</var><sub>1</sub> + <var>Q</var><sub>2</sub> by at least 1, the sum is your <var>Q</var>. "Orders waiting + orders unarrived" is the usual shape.
+</div>
+
+<div class="quiz" data-answer="3">
+  <p class="quiz-q">Why does jumping the clock to the next eligibility time matter?</p>
+  <button class="quiz-opt">It keeps the heap smaller than before</button>
+  <button class="quiz-opt">It removes the need for a tiebreaker</button>
+  <button class="quiz-opt">It makes the greedy choice provably optimal</button>
+  <button class="quiz-opt">It bounds iterations by items, not ticks</button>
+  <p class="quiz-explain">It is what makes every iteration consume something, so the item count becomes a valid <var>Q</var>. The heap holds the same items either way, ties are settled by the key you chose, and correctness of the choice is section 6's business — a clock policy cannot fix a wrong choice.</p>
+</div>
+
+<h2>5. The cost, per phase</h2>
+
+<p>Same table format as always — phases first, dominance second, aggregate last. For <var>n</var> orders through the loop, with the clock-jumping policy:</p>
+
+<table>
+  <tr><th>Phase</th><th>What runs</th><th>Cost</th></tr>
+  <tr><td>Prepare</td><td>sort the orders by arrival time</td><td>O(n log n)</td></tr>
+  <tr><td>Loop</td><td>≤ n iterations; each order pushed once, popped once</td><td>O(n log n)</td></tr>
+  <tr><td>Output</td><td>build the answer list</td><td>O(n)</td></tr>
+</table>
+
+<p>Two phases tie at <code>O(n log n)</code>, and that is worth seeing once: "which phase dominates" does not always have exactly one winner. What it never has is <em>zero</em> winners — the aggregate is <code>O(n log n)</code>, and it comes from naming the phases, not from recognising the shape.</p>
+
+<p>The push-once-pop-once accounting is the part to keep. You are not paying <code>log n</code> per <em>iteration</em>; you are paying it per <em>order</em>, twice, across the whole run. That is why the release step must never rescan.</p>
+
+<h2>6. What you just did has a name: greedy</h2>
+
+<p>The worker's rule — take the best available option, never reconsider a past choice — is a <strong>greedy algorithm</strong>. No backtracking, no table of subproblems. The heap's role in any greedy algorithm is always the same one it played here: the option set keeps changing (things arrive, get consumed), and the heap answers "best available right now" in <code>O(log n)</code> against a moving set. If the options never changed, you would sort once and walk the list.</p>
+
+<p>"Take the best now" is a strong claim: you are asserting that a decision made with partial information will still look right at the end. <strong>Sometimes it is false.</strong> The smallest example, in full:</p>
+
+<p><strong>Making change.</strong> You have unlimited coins of denominations 1, 3, and 4, and you must pay exactly 6 using as few coins as possible. Try the greedy rule <em>"take the biggest coin that does not exceed what you still owe"</em>:</p>
+
+<pre><code>owe 6 → biggest coin ≤ 6 is 4 → take 4, owe 2
+owe 2 → biggest coin ≤ 2 is 1 → take 1, owe 1   (3 does not fit in 2)
+owe 1 → take 1, owe 0
+
+greedy:   4 + 1 + 1  → 3 coins
+optimal:  3 + 3      → 2 coins</code></pre>
+
+<p>Grabbing the 4 felt like progress and it ruined the answer, because it left a remainder only 1s can pay. So a greedy choice needs a <em>reason</em> it cannot cost you later. The standard reason is the <strong>exchange argument</strong>: assume an optimal solution that disagrees with your choice, swap it to agree with you, and show the swap never makes things worse. Repeat the swap and their optimum becomes yours. Jeff Erickson works this proof in his <em>Algorithms</em>, and names the technique outright:</p>
+
+<blockquote>To show that the greedy algorithm is actually correct, we proved that the output of any other algorithm can be improved by some sort of exchange.<br>
+— <a href="https://jeffe.cs.illinois.edu/teaching/algorithms/book/04-greedy.pdf">Erickson, <em>Algorithms</em>, p.160</a></blockquote>
+
+<p>In an interview you will rarely write the full proof. You will be asked <em>"why is greedy correct here?"</em>, and "swapping any two of my choices cannot improve the result, because…" is the shape of the answer. (For the worker's rule it goes through: swapping a lower-priority order into an earlier slot never helps. For the coins, it does not — that is the difference.) If you cannot even sketch the swap, that is your signal the problem may not be greedy at all.</p>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">What licenses you to never revisit a greedy choice?</p>
+  <button class="quiz-opt">A test suite that passes every case</button>
+  <button class="quiz-opt">A heap that always returns the maximum</button>
+  <button class="quiz-opt">A proof that swapping cannot improve it</button>
+  <button class="quiz-opt">A bound showing the loop always terminates</button>
+  <p class="quiz-explain">The exchange argument. Tests show absence of counterexamples among cases you thought of; the coin example above passes a lot of tests before it fails. Termination is a separate obligation — section 4 — and a heap is only the machinery for finding the choice, never a reason the choice is right.</p>
+</div>
+
+<h2>7. The drill</h2>
+
+<p>Open <a href="0005-scheduling-drill.py"><code>lessons/0005-scheduling-drill.py</code></a> and run it:</p>
+
+<pre><code>python3.14 learning/heap-priority-queue/lessons/0005-scheduling-drill.py</code></pre>
+
+<ul>
+  <li><strong>Part A — the bound.</strong> Name the shrinking quantity and the iteration count for both clock policies. On paper first — it decides the shape of Part B.</li>
+  <li><strong>Part B — <code>processing_order()</code>.</strong> Build the two containers. One test feeds you arrival times in the billions, which a tick-by-tick loop cannot survive — section 4 is not decoration.</li>
+  <li><strong>Part C — predict.</strong> Three small traces, written down <em>before</em> you run anything. Use the table format from section 3.</li>
+</ul>
+
+<p>Then read <a href="https://jeffe.cs.illinois.edu/teaching/algorithms/book/04-greedy.pdf">Erickson, Chapter 4</a> — §4.1 and §4.2 only, about eight pages. Two exchange proofs on problems small enough to hold in your head, and the second one (<em>Scheduling Classes</em>) is a greedy schedule where the key is not the obvious one.</p>
+
+<div class="ask-teacher">
+  <strong>Your teacher is one message away.</strong> If a section reads as confusing, say so and say which — that is a bug report about the lesson, not about you, and the last two changed how these are written. And if you would rather have the answer than another question, ask for the answer.
+</div>
+
+<div class="lesson-nav">
+  <a href="0004-choosing-key-and-direction.html">← Lesson 4 — Choosing the Key, Choosing the Direction</a>
+  <a href="../reference/heap-cheat-sheet.html">Cheat sheet →</a>
+</div>
+
+</body>
+</html>
