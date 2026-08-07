@@ -215,6 +215,7 @@ class PrioritizedItem:
 
 <ul>
   <li><strong>Release never rescans.</strong> Keep the waiting area sorted by eligibility time and walk it from the front, stopping at the first item not yet eligible — each item is looked at once, ever. Only when eligibility order differs from parking order do you need a <em>second heap</em>, keyed by eligibility time.</li>
+  <li><strong>Sorted by construction.</strong> Two ways the waiting area gets its order: arbitrary arrival times from the input need an explicit sort (one-way gate, L5 drill); a repeating gate that parks items at <code>clock + cooldown</code> needs none — the clock is monotone and the cooldown fixed, so appends already arrive in order. Same invariant, two sources. (Earned on LC 621.)</li>
   <li><strong>The tuple carries the whole tie rule.</strong> "Priority, then arrival, then name" is three levels → three fields: <code>(-priority, arrival, name)</code>. A two-field tuple silently substitutes the wrong tiebreaker on the first collision.</li>
   <li><strong>Accounting is per item, not per iteration</strong>: each item is pushed once and popped once, so the loop totals O(n log n) regardless of how the iterations interleave.</li>
   <li><strong>One-way vs repeating gate</strong>: one-way — once eligible, stays eligible; <em>act</em> discards the item. Repeating — the item becomes ineligible again on use; <em>act</em> parks it back in the waiting area with its next eligibility time. Same containers, same invariant.</li>
@@ -231,6 +232,7 @@ class PrioritizedItem:
 <ul>
   <li><strong>The trap: an iteration that consumes nothing.</strong> An idle tick handles no item, leaves Q unchanged, and voids condition (2). Fix the <em>clock policy</em>: jump straight to the next eligibility time, so every iteration consumes an item — the bound becomes <strong>n (input size)</strong> instead of <strong>T (a number that came with the data)</strong>. Five orders with arrivals near 10⁹: jump = 5 iterations, tick-by-tick = 10⁹.</li>
   <li><strong>When no single Q works</strong>, bound the sum: if every iteration decreases <var>Q</var>₁ + <var>Q</var>₂ by at least 1, the sum is your Q. "Items waiting + items unarrived" is the usual shape.</li>
+  <li><strong>The pairing argument — when Q freezes on some iterations.</strong> A clock-jump iteration executes nothing, so Q holds still. If every such iteration is <em>immediately followed</em> by one that shrinks Q (the jump lands exactly where an item becomes eligible), charge the frozen iteration to its neighbor: #jumps ≤ #executions, total ≤ 2·Q<sub>start</sub>, and the constant vanishes. (Earned on LC 621.)</li>
 </ul>
 
 <h2>Patterns (unlocked as the track progresses)</h2>
