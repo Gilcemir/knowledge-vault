@@ -1,6 +1,6 @@
 # heapq
 
-Min-heap operations on a plain `list` — O(log n) push/pop, O(1) peek-min. The module is functions-on-a-list, not a class.
+Min-heap operations on a plain `list` — O(log n) push/pop, O(1) peek-min. The module is functions-on-a-list, not a class. Since Python 3.14 there are also native max-heap counterparts (`*_max` functions).
 
 ## Complexity reference
 
@@ -14,6 +14,9 @@ Min-heap operations on a plain `list` — O(log n) push/pop, O(1) peek-min. The 
 | `heappushpop(h, x)` | O(log n) | push x + pop min (pushed item may be the popped) |
 | `nlargest(k, iter)` | O(n log k) | beats `sorted(iter)[-k:]` (O(n log n)) when k ≪ n |
 | `nsmallest(k, iter)` | O(n log k) | |
+| `heapify_max(lst)` | O(n) | 3.14+ — max-heap variants of the five ops above |
+| `heappush_max` / `heappop_max` | O(log n) | 3.14+ — `h[0]` peeks **max** |
+| `heapreplace_max` / `heappushpop_max` | O(log n) | 3.14+ |
 
 ## Min-heap
 
@@ -43,9 +46,34 @@ heapq.heappop(nums)                   # 1
 
 `heapify` is in-place. Always preferred over repeated `heappush` when you already have the data.
 
-## Max-heap — negate values
+## Max-heap — native `*_max` functions (3.14+)
 
-`heapq` is min-only. For max-heap behavior, store negatives:
+Python 3.14 promoted the private `_heapify_max`-style helpers to a public API. Same list-based design, invariant flipped (parent ≥ children):
+
+```python
+import heapq
+
+h = [5, 3, 8, 1, 4]
+heapq.heapify_max(h)                  # O(n), in place
+
+top = h[0]                            # 8    peek max   O(1)
+val = heapq.heappop_max(h)            # 8    pop max    O(log n)
+heapq.heappush_max(h, 7)              # O(log n)
+
+heapq.heapreplace_max(h, 2)           # pop max, then push 2
+heapq.heappushpop_max(h, 9)           # push 9, then pop max (returns 9 here)
+```
+
+Gotchas:
+
+- **Never mix** min and max functions on the same list — the invariants are incompatible and you'll get silent garbage, not an exception.
+- `heappush_max` requires a list that's already a valid max-heap (`heapify_max` first, or start from `[]`).
+- There is no `nlargest_max` / key support beyond what the min-heap API already offers — `nlargest`/`nsmallest` cover that.
+- Works naturally with the `(priority, tiebreak, value)` tuple pattern below — biggest tuple wins.
+
+### Fallback for < 3.14 — negate values
+
+On older Pythons (or when porting), store negatives in a min-heap:
 
 ```python
 import heapq
@@ -58,7 +86,7 @@ max_val = -h[0]                       # 5      peek max
 val = -heapq.heappop(h)               # 5      pop max
 ```
 
-For object payloads, see the tiebreak pattern below.
+Only works for negatable keys (numbers). For object payloads, combine with the tiebreak pattern below.
 
 ## Tuples as priority — with a tiebreaker
 
@@ -130,6 +158,17 @@ def dijkstra(graph, src):
                 dist[v] = nd
                 heapq.heappush(pq, (nd, v))
     return dist
+
+# Last Stone Weight (LC 1046) — repeatedly smash the two heaviest (3.14+ max-heap)
+def last_stone_weight(stones: list[int]) -> int:
+    heapq.heapify_max(stones)
+    while len(stones) > 1:
+        a = heapq.heappop_max(stones)
+        b = heapq.heappop_max(stones)
+        if a != b:
+            heapq.heappush_max(stones, a - b)
+    return stones[0] if stones else 0
+# O(n log n) time, O(1) extra space — no negation dance needed
 
 # Merge k sorted lists — one entry per list in the heap
 def merge_k_sorted(lists):
