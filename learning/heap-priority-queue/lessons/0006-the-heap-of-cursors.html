@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 6 — The Heap of Cursors: Merging Sorted Sources</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>The Heap of Cursors: Merging Sorted Sources</h1>
+<p class="lesson-meta">Lesson 6 · ~30 min (lesson 12 min + drill 18 min) · <a href="0005-greedy-and-heap-scheduling.html">← Lesson 5</a> · <a href="../reference/heap-cheat-sheet.html">cheat sheet</a></p>
+
+<p>This lesson teaches exactly one new skill: <strong>a heap whose entries are positions into data owned by other structures</strong>. Until now, every heap you built owned its items. This one owns nothing — it is a set of bookmarks. As always, the problem comes first.</p>
+
+<h2>1. The problem</h2>
+
+<p>Your system runs several services. Each service writes its own log: a list of records, each with a tick <code>t</code> and a message, and each list is <strong>already in time order</strong> — appends come from a clock that only moves forward, the same reason the queue in your last problem never needed sorting. The logs live in a dict:</p>
+
+<pre><code>services = {
+    "api": [{"t": 1, "msg": "api-1"}, {"t": 4, "msg": "api-2"}],
+    "db":  [{"t": 1, "msg": "db-1"},  {"t": 9, "msg": "db-2"}],
+    "web": [{"t": 2, "msg": "web-1"}],
+}</code></pre>
+
+<p><strong>Your job</strong> (the drill's Part B): produce the one merged timeline, smaller <code>t</code> first; on a <code>t</code> tie across services the smaller service name goes first; within one service, original order is preserved. Worked in full on the input above:</p>
+
+<pre><code>t=1  api-1     (tie with db-1 at t=1 → "api" &lt; "db")
+t=1  db-1
+t=2  web-1
+t=4  api-2
+t=9  db-2</code></pre>
+
+<p>Two facts about real deployments make this interesting: <var>N</var>, the total record count, is <em>huge</em> — and the caller very often wants only the <em>first page</em>: the first <var>r</var> records, with <var>r</var> tiny. Hold both; they decide everything below.</p>
+
+<h2>2. Two ways that work — and what each one wastes</h2>
+
+<p><strong>Dump and re-sort.</strong> Concatenate all <var>N</var> records, sort the pile. Correct — and it throws away the one thing you were given for free: every piece was <em>already sorted</em>. You pay <code>O(N log N)</code> as if the input were random noise, and you cannot stop early: the sort finishes before the first record is usable.</p>
+
+<p><strong>Scan the heads.</strong> Better instinct: the next record of the merged timeline must be the earliest <em>unconsumed</em> record of some service — one of <var>k</var> candidates, the "head" of each list. So: compare the <var>k</var> heads, take the smallest, advance that list, repeat. Correct — and each of the <var>N</var> steps rescans all <var>k</var> heads: <code>O(N·k)</code>.</p>
+
+<p>Read the second one again. A set of candidates that changes at every step, and the same question asked each time: <em>"best available right now?"</em> — you met this exact sentence in <a href="0005-greedy-and-heap-scheduling.html">Lesson 5</a>. That question, asked repeatedly against a moving set, is the heap's one job. The scan is a correct algorithm paying the heap's price in the wrong coin.</p>
+
+<h2>3. The fix: a heap of cursors</h2>
+
+<p>Put the <var>k</var> heads in a heap — not the records, <em>positions</em>: tuples <code>(t, service, position)</code>. The data never moves; it stays in the dict's lists.</p>
+
+<div class="callout key">
+  <span class="callout-title">The invariant</span>
+  The heap holds <strong>exactly one entry per unfinished source — its head</strong>. It never owns the data; it holds bookmarks into data owned elsewhere. Its size is <var>k</var>, whatever <var>N</var> is.
+</div>
+
+<pre><code>seed — one bookmark per non-empty source, heapify
+while the heap is not empty:
+    pop the smallest (t, service, position)   — that record is next
+    output it (read straight from the dict)
+    advance — if that service has a record at position + 1, push it</code></pre>
+
+<p>Pop the winner, push the winner's successor <em>from the same list</em>. Here is the full trace on the section 1 input. Notation: <code>api₀¹</code> means "bookmark into <code>api</code> at position 0, whose record has t = 1". This table is the lesson — if you can reproduce it on paper for a different input, you have the pattern:</p>
+
+<table>
+  <tr><th>heap (the frontier)</th><th>move</th><th>output so far</th></tr>
+  <tr><td>api₀¹ · db₀¹ · web₀²</td><td>seed all three heads</td><td>[]</td></tr>
+  <tr><td>db₀¹ · web₀² · api₁⁴</td><td>pop api₀ (t-tie vs db₀ → name), push api₁</td><td>[api-1]</td></tr>
+  <tr><td>web₀² · api₁⁴ · db₁⁹</td><td>pop db₀, push db₁</td><td>[api-1, db-1]</td></tr>
+  <tr><td>api₁⁴ · db₁⁹</td><td>pop web₀ — web is exhausted, no push</td><td>[api-1, db-1, web-1]</td></tr>
+  <tr><td>db₁⁹</td><td>pop api₁ — api is exhausted, no push</td><td>[api-1, db-1, web-1, api-2]</td></tr>
+  <tr><td>—</td><td>pop db₁ — heap empty, done</td><td>[api-1, db-1, web-1, api-2, db-2]</td></tr>
+</table>
+
+<p>Every row, the heap holds at most three bookmarks — one per service still alive. It never grows with <var>N</var>. And nothing here is min-only: newest-first instead of oldest-first is the same machinery with <a href="0004-choosing-key-and-direction.html">Lesson 4</a>'s direction decision flipped. Nothing else changes.</p>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">Mid-merge, what does the heap contain?</p>
+  <button class="quiz-opt">All records of all sources, tagged as pending</button>
+  <button class="quiz-opt">The r smallest records seen so far anywhere</button>
+  <button class="quiz-opt">One entry per source that still holds records</button>
+  <button class="quiz-opt">One entry per source that is already exhausted</button>
+  <p class="quiz-explain">One head per unfinished source — the frontier. Push everything and you have rebuilt dump-and-re-sort with extra steps, at heap size N. Exhausted sources have nothing left to offer and simply drop out of the heap.</p>
+</div>
+
+<h2>4. The tuple, one more time</h2>
+
+<p>You have designed heap tuples twice now — key and direction in Lesson 4, the three-level tie rule in Lesson 5. This one adds a twist: the records are <strong>dicts, and dicts cannot be ordered</strong>. If a comparison ever reaches one, the merge dies with a <code>TypeError</code>. Each field of <code>(t, service, position)</code> is doing a job:</p>
+
+<ul>
+  <li><code>t</code> — the merge order itself;</li>
+  <li><code>service</code> — the spec's tiebreak: smaller name first on a <code>t</code> tie;</li>
+  <li><code>position</code> — preserves within-service order, <em>and</em> makes the prefix <strong>unique</strong>: no two entries can tie on all three fields, so a comparison always stops before any payload could be reached.</li>
+</ul>
+
+<p>Tuple comparison stops at the first field that differs — a unique comparable prefix is a fence the comparison can never climb over. This is not a trick of this lesson; it is the documented pattern for real-world priority queues, straight from the <a href="https://docs.python.org/3/library/heapq.html#priority-queue-implementation-notes">heapq priority-queue implementation notes</a>: store <code>(priority, count, task)</code> where <code>count</code> is a unique sequence number, precisely so <code>task</code> — arbitrary, unorderable — is never compared.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">The payload rides behind the fence</span>
+  Whether the payload sits in the tuple after a unique prefix or stays out of the heap entirely (looked up by <code>(service, position)</code>, as here), the rule is the same: <strong>everything that decides order comes first, is comparable, and cannot fully tie</strong>. The drill has a test whose only purpose is to raise <code>TypeError</code> the moment your entries can reach a record.
+</div>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">What makes (t, service, position) a safe heap entry?</p>
+  <button class="quiz-opt">No two entries can ever tie on every field</button>
+  <button class="quiz-opt">The heap compares only the first tuple field given</button>
+  <button class="quiz-opt">Dicts compare by identity when both keys are equal</button>
+  <button class="quiz-opt">heapq detects records and skips them during every comparison</button>
+  <p class="quiz-explain">Uniqueness of the prefix. Tuple comparison walks fields left to right until one differs; (service, position) is unique per record, so a decision is always reached. It does not stop at the first field — it stops at the first difference. Dicts do not order at all, and heapq has no idea what a record is.</p>
+</div>
+
+<h2>5. The cost, per phase — and what laziness buys</h2>
+
+<p>Notation as in the drill: <var>k</var> sources, <var>N</var> total records, <var>r</var> records requested. Full merge, phases first:</p>
+
+<table>
+  <tr><th>Phase</th><th>What runs</th><th>Cost</th></tr>
+  <tr><td>Seed</td><td>heapify one head per source</td><td>O(k)</td></tr>
+  <tr><td>Loop</td><td>each record enters the heap once, leaves once; heap never exceeds k</td><td>O(N log k)</td></tr>
+  <tr><td>Output</td><td>build the merged list</td><td>O(N)</td></tr>
+</table>
+
+<p>Dominant: the loop, <code>O(N log k)</code> — against the baseline's <code>O(N log N)</code>. The gap is <code>log k</code> vs <code>log N</code>: the price of a heap operation is the log of <em>the heap's size</em>, and the frontier keeps that size at <var>k</var>, not <var>N</var>. Same accounting as Lesson 5: per record, not per iteration. (The loop's bound itself you already own: Q = records not yet output, down by one every iteration — no pairing argument even needed here.)</p>
+
+<p>Now the first page. The loop above has a property dump-and-re-sort can never have: after <var>r</var> pops, the first <var>r</var> records of the answer are <em>complete and correct</em> — so stop. Seed the heads, pop <var>r</var> times, each pop pushing at most one successor:</p>
+
+<p style="text-align: center;"><strong>first r records: O(k + r log k)</strong> — the other N − r records are never touched.</p>
+
+<p>With <var>N</var> in the millions and <var>r</var> = 10, that is the difference between a query and a batch job. The heap did not get faster; it got <em>lazier</em> — it does exactly as much of the merge as is consumed, because at every moment it holds the complete answer to "what comes next?".</p>
+
+<div class="quiz" data-answer="3">
+  <p class="quiz-q">You need only the first r records of the merge. What do you save?</p>
+  <button class="quiz-opt">Nothing: the seed alone already costs O(N)</button>
+  <button class="quiz-opt">Only heap size: it shrinks from N</button>
+  <button class="quiz-opt">One sort pass over the r records</button>
+  <button class="quiz-opt">All work on records beyond the r-th</button>
+  <p class="quiz-explain">Everything past the r-th record is never popped, never pushed, never read: O(k + r log k). The seed is O(k), not O(N) — heads only. The heap's size was never N to begin with (the frontier), and there is no sort anywhere in this algorithm — that is the point of it.</p>
+</div>
+
+<h2>6. The standard library knows this loop</h2>
+
+<p>What you are about to build by hand exists as <a href="https://docs.python.org/3/library/heapq.html#heapq.merge"><code>heapq.merge(*iterables, key=None, reverse=False)</code></a> — it takes already-sorted inputs, returns a <em>lazy iterator</em> over the merged whole, and its implementation is a heap of cursors. So why build it yourself? Because in problems — and in interviews — the merge is rarely the whole task: you will need your own direction, your own tie rule, your own stopping point, and the tuple that encodes them is exactly what <code>heapq.merge</code> hides. Per the house rule, don't take my word for the mechanism: after the drill, <a href="https://github.com/python/cpython/blob/main/Lib/heapq.py">read its source</a> — you will recognize every move, cursor advance and all.</p>
+
+<h2>7. The drill</h2>
+
+<p>Open <a href="0006-merge-drill.py"><code>lessons/0006-merge-drill.py</code></a> and run it:</p>
+
+<pre><code>python3.14 learning/heap-priority-queue/lessons/0006-merge-drill.py</code></pre>
+
+<ul>
+  <li><strong>Part A — the frontier and the costs.</strong> On paper first. The first two answers <em>are</em> the design of Part B.</li>
+  <li><strong>Part B — <code>merge_logs()</code>, then <code>first_r()</code>.</strong> The harness watches the size of your heap, counts your pops on a 150,000-record input, and has one test that exists only to raise <code>TypeError</code> at a badly built tuple.</li>
+  <li><strong>Part C — predict.</strong> Three merges on paper before you run anything, table of section 3 in hand.</li>
+</ul>
+
+<p>Then read the <a href="https://docs.python.org/3/library/heapq.html#priority-queue-implementation-notes">priority-queue implementation notes</a> in the <code>heapq</code> docs — one screen, and it is the section 4 pattern as the Python maintainers state it — and let the <a href="https://docs.python.org/3/library/heapq.html#theory">theory essay</a> at the bottom of the same page tell you where this merge shows up at industrial scale.</p>
+
+<div class="ask-teacher">
+  <strong>Your teacher is one message away.</strong> If a section reads as confusing, say so and say which — that is a bug report about the lesson, not about you. And if you would rather have the answer than another question, ask for the answer.
+</div>
+
+<div class="lesson-nav">
+  <a href="0005-greedy-and-heap-scheduling.html">← Lesson 5 — Greedy and the Heap</a>
+  <a href="../reference/heap-cheat-sheet.html">Cheat sheet →</a>
+</div>
+
+</body>
+</html>
