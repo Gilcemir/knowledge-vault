@@ -235,12 +235,33 @@ class PrioritizedItem:
   <li><strong>The pairing argument — when Q freezes on some iterations.</strong> A clock-jump iteration executes nothing, so Q holds still. If every such iteration is <em>immediately followed</em> by one that shrinks Q (the jump lands exactly where an item becomes eligible), charge the frozen iteration to its neighbor: #jumps ≤ #executions, total ≤ 2·Q<sub>start</sub>, and the constant vanishes. (Earned on LC 621.)</li>
 </ul>
 
+<h2>The heap of cursors: merging k sorted sources</h2>
+<p>The heap never owns the data. The sources stay where they are; the heap holds <strong>positions into them</strong>. At any moment each unfinished source has exactly one record that could possibly be next — its earliest remaining one. Those heads are the <em>frontier</em>, and the frontier is the heap.</p>
+
+<div class="callout key">
+  <span class="callout-title">The frontier invariant</span>
+  One entry per <strong>unfinished</strong> source, never more — heap size is bounded by <var>k</var> (number of sources), never <var>N</var> (total records). Push everything and you have rebuilt dump-and-re-sort with extra steps, at heap size N.
+</div>
+
+<pre><code>seed:  one (key, name, 0) per non-empty source, then heapify     — O(k)
+loop:  pop the smallest head → emit its record → advance that
+       source's cursor → push its next head, if any              — O(N log k)
+</code></pre>
+
+<ul>
+  <li><strong>The tuple settles every tie before the record.</strong> <code>(t, name, cursor)</code> — a unique comparable prefix is a fence the comparison can never climb over, so the record itself (a dict, unorderable) is never compared. This is the documented <code>(priority, count, task)</code> pattern from the <a href="https://docs.python.org/3/library/heapq.html#priority-queue-implementation-notes">heapq implementation notes</a>.</li>
+  <li><strong>Cost per record, not per iteration</strong>: each record enters the heap once and leaves once, and the heap never grows past k → loop O(N log k), seed O(k), output O(N); the loop dominates. The baseline it beats: concat everything and comparison-sort, O(N log N). The whole gap is log k vs log N — a heap operation costs the log of <em>the heap's size</em>.</li>
+  <li><strong>Early stop is free.</strong> The first r records cost the seed plus r pops, each followed by at most one push — O(k + r log k). Records beyond the r-th are never pushed, never popped, never read.</li>
+  <li><strong>Direction is L4's decision.</strong> A min-heap merges ascending; the same machinery runs the other way when "smallest first" is not what the caller asked for.</li>
+  <li><strong>The stdlib name</strong>: <a href="https://docs.python.org/3/library/heapq.html#heapq.merge"><code>heapq.merge(*iterables, key=None, reverse=False)</code></a> — a lazy iterator whose implementation is exactly this. Build it yourself anyway: problems need your own direction, tie rule, and stopping point, and the tuple encoding them is what <code>heapq.merge</code> hides.</li>
+</ul>
+
 <h2>Patterns (unlocked as the track progresses)</h2>
 <table>
   <tr><th>Pattern</th><th>Signal in the problem</th><th>Lesson</th></tr>
   <tr><td>Top-K</td><td>"k largest / k closest / k most frequent"</td><td>L4 ✅</td></tr>
   <tr><td>Greedy + heap</td><td>"always take the best available next"</td><td>L5 ✅</td></tr>
-  <tr><td>Heap + hashmap composition</td><td>"design a system that feeds sorted-ish data"</td><td>L6</td></tr>
+  <tr><td>Heap of cursors (k-way merge)</td><td>"k sorted sources, one combined order"</td><td>L6 ✅</td></tr>
   <tr><td>Two heaps</td><td>"running median / balance two halves"</td><td>L7</td></tr>
 </table>
 
