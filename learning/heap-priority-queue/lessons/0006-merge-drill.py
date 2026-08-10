@@ -63,16 +63,16 @@ import heapq
 # Leave a value as None to skip it.
 
 BOUNDS: dict[str, str | None] = {
-    "frontier": None,
-    "heap_size": None,
+    "frontier": "one head per unfinished source",
+    "heap_size": "k",
 
-    "concat_sort_cost": None,
-    "seed_cost": None,
-    "loop_cost": None,
-    "output_cost": None,
-    "dominant": None,
+    "concat_sort_cost": "O(N log N)",
+    "seed_cost": "O(k)",
+    "loop_cost": "O(N log k)",
+    "output_cost": "O(N)",
+    "dominant": "loop",
 
-    "first_r_cost": None,
+    "first_r_cost": "O(k + r log k)",
 }
 
 
@@ -106,7 +106,18 @@ def merge_logs(services: dict[str, list[dict]]) -> list[dict]:
         must settle every tie before a record would ever be reached.
       - A service's log may be empty; `services` itself may be empty.
     """
-    raise NotImplementedError
+    res = []
+    h = [(logs[0]["t"], service, 0) for service, logs in services.items() if logs]
+
+    heapq.heapify(h)
+    while h:
+        _, service, cursor = heapq.heappop(h)
+        res.append(services[service][cursor])
+        cursor += 1
+        if cursor < len(services[service]):
+            heapq.heappush(h, (services[service][cursor]["t"], service, cursor))
+
+    return res
 
 
 def first_r(services: dict[str, list[dict]], r: int) -> list[dict]:
@@ -121,8 +132,18 @@ def first_r(services: dict[str, list[dict]], r: int) -> list[dict]:
     while asking for ten — one pop per record returned, plus the seed, and
     nothing beyond that.
     """
-    raise NotImplementedError
+    res = []
+    h = [(logs[0]["t"], service, 0) for service, logs in services.items() if logs]
 
+    heapq.heapify(h)
+    while h and len(res) < r:
+        _, service, cursor = heapq.heappop(h)
+        res.append(services[service][cursor])
+        cursor += 1
+        if cursor < len(services[service]):
+            heapq.heappush(h, (services[service][cursor]["t"], service, cursor))
+
+    return res
 
 # ----------------------------------------------------------------------------
 # PART C — predict the trace
@@ -154,9 +175,9 @@ def first_r(services: dict[str, list[dict]], r: int) -> list[dict]:
 # Write real lists of real strings, e.g. ["a-1", "b-1"] — not "[a-1, b-1]".
 
 PREDICTIONS: dict[str, list[str] | None] = {
-    "C1": None,
-    "C2": None,
-    "C3": None,
+    "C1": ["api-1", "web-1", "api-2"],
+    "C2": ["web-1", "api-1", "api-2", "web-2"],
+    "C3": ["a-1", "b-1", "b-2"],
 }
 
 
