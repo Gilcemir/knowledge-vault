@@ -1,0 +1,13 @@
+# Heap of cursors transferred to a design problem; alias-vs-copy bug found from one symptom hint
+
+On P6 (LC 355, solved solo 2026-08-10 with only the thin handover), Gil recognized the news feed as a k-way merge unprompted and reused the entire L6 machinery: `(timestamp, user, cursor)` tuple, frontier bounded by K followees, early stop at 10 — plus the direction flip via negated `itertools.count` with `appendleft`, so cursors still walk forward. That is L4's direction tool composed with L6's pattern, chosen without either being named. This was the first *design* problem of the track (four operations, three structures under mutation), the exact composition he voiced anxiety about at P5.
+
+**Evidence**: accepted on LeetCode; per-phase cost table nearly right first pass. One wrong cell — `dominant` given as the loop — corrected in one round once "r is pinned to 10 by the statement" was pointed at: substituting the constant into L6's O(k + r log k) makes the O(K) seed dominate. A reprise of L4's "dominance shifts with the parameters", this time triggered by the problem statement rather than the input.
+
+**The bug (misconception corrected)**: `users = self.rs[userId] if userId in self.rs else set()` followed by `users.add(userId)` — on the common path `users` is an *alias* of the persistent relations set, so a read-only query permanently wrote a self-follow into state. Latent: invisible to the judge because the feed includes self anyway and re-adding is idempotent. Given only the symptom ("getNewsFeed mutates the object"), he located the line and named the mechanism ("estou mutando o set original") in one round. Same Python-level slip family as the `count()`-object and str-of-list incidents, new subfamily: **alias vs copy of shared mutable state**. His own cost table had priced "montar" at O(K) — the cost of the *copy his code didn't make* — so the table described the corrected code.
+
+**Implications**:
+
+- Composition anxiety (P5) now has a counter-example he built himself: he called the code "feio" while the design was the drill transferred cleanly — his aesthetic alarm fires on init boilerplate, not on structure. Keep splitting surface vs design explicitly in reviews.
+- L8 cold re-tests to add: (1) alias-vs-copy — show a query that mutates via aliasing, ask for the failure mode; (2) failure-class vocabulary — at L6 he pre-diagnosed a wrong-output bug as "provavelmente sintaxe" while the code ran; name syntax/runtime/wrong-output and what evidence rules each out.
+- The lesson→problem spoiler discipline held for the third consecutive chain (L3→P1, L5→P5, L6→P6); keep it for L7→P7.
