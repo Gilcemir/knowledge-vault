@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 7 — Two Heaps, One Boundary</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>Two Heaps, One Boundary</h1>
+<p class="lesson-meta">Lesson 7 · ~30 min (lesson 12 min + drill 18 min) · <a href="0006-the-heap-of-cursors.html">← Lesson 6</a> · <a href="../reference/heap-cheat-sheet.html">cheat sheet</a></p>
+
+<p>This lesson teaches exactly one new skill: <strong>maintaining an ordered boundary through a changing population, with two heaps facing each other</strong>. Every heap so far served one end of one group. This time the interesting spot is the <em>middle</em> — the line where one group ends and the other begins. As always, the problem comes first.</p>
+
+<h2>1. The problem</h2>
+
+<p>Your CI cluster has <var>s</var> build machines (<em>slots</em>). Jobs arrive one at a time, each with a priority. The rule the whole team agreed on: <strong>at every moment, the <var>s</var> strongest jobs are the ones running</strong> — everyone else waits. "Stronger" means higher priority; on a priority tie, the job submitted earlier outranks. If a new job outranks the weakest running one, that running job is <em>preempted</em>: kicked back to the waiting pool, mid-build, no mercy.</p>
+
+<p>Two questions must be answerable instantly, because the dashboard polls them constantly:</p>
+
+<ul>
+  <li><strong>weakest running</strong> — the job on the chopping block, the one a newcomer would preempt;</li>
+  <li><strong>strongest waiting</strong> — the job next in line, the one a freed machine would take.</li>
+</ul>
+
+<p>And the boundary itself moves: a machine comes online (<code>add_slot</code> — the strongest waiting job is promoted) or dies (<code>remove_slot</code> — the weakest running job is demoted). A worked session, <var>s</var> = 2:</p>
+
+<pre><code>submit d(4)          → runs (farm not full)
+submit e(9)          → runs (farm not full)
+submit f(6)          → f outranks d(4): d is preempted → f runs, d waits
+weakest_running?     → f          strongest_waiting?  → d
+submit g(8)          → g outranks f(6): f is preempted → g runs, f waits
+weakest_running?     → g          strongest_waiting?  → f</code></pre>
+
+<p>Notation before any costs, so no letters collide: <var>n</var> = jobs currently in the farm (both groups together), <var>s</var> = slots. <var>n</var> grows without bound; <var>s</var> is small and moves by one.</p>
+
+<h2>2. Two designs that work — and what each one wastes</h2>
+
+<p><strong>One list, kept sorted.</strong> Keep every job in one list ordered by strength; the boundary is just index <var>s</var>. Both queries are O(1) reads — lovely. But every submit must <em>insert into the middle</em> of a sorted list, and insertion shifts everything after the slot: O(<var>n</var>) per submit, even using <code>bisect.insort</code> — the docs say it plainly: the search is O(log <var>n</var>), <a href="https://docs.python.org/3/library/bisect.html#bisect.insort">"the slow O(n) insertion step"</a> dominates. A million submits → a trillion shifts. The order you maintain is <em>total</em>: every job perfectly ranked against every other. The dashboard only ever asks about two of them.</p>
+
+<p><strong>One heap.</strong> A single max-heap of all jobs answers "strongest overall" in O(1) — but the questions live at the <em>boundary</em>, not the top. "Weakest running" is a <em>min</em>-question asked of the top group, and <a href="0004-choosing-key-and-direction.html">Lesson 4</a> was blunt about this: <strong>a heap serves one end</strong>. Getting the other end out of it is an O(<var>n</var>) scan. Preempting — removing something from the middle of a heap — is no better.</p>
+
+<p>Look at what the two failures have in common. The sorted list maintains <em>too much</em> order; the single heap maintains order <em>in the wrong place</em>. Everything the dashboard asks — who gets preempted, who gets promoted — happens at exactly one line: the cut between running and waiting.</p>
+
+<h2>3. The fix: cut the population, point both roots at the cut</h2>
+
+<p>Split the jobs into the two groups they already form. Give each group its own heap, and choose each direction so that <strong>the root is the group's boundary-side element</strong>:</p>
+
+<ul>
+  <li><strong>running</strong> → a <strong>min-heap</strong>: its root is the <em>weakest runner</em>;</li>
+  <li><strong>waiting</strong> → a <strong>max-heap</strong>: its root is the <em>strongest waiter</em>.</li>
+</ul>
+
+<p>The two roots face each other across the cut like sentries. Both dashboard questions are now root peeks — O(1). And every event in the farm's life is a move <em>at the roots</em>:</p>
+
+<pre><code>submit(job):
+    if the farm is not full:            push job onto running
+    elif job outranks running's root:   pop that root, push it onto waiting,
+                                        push job onto running          (preempt)
+    else:                               push job onto waiting
+
+add_slot:     if anyone waits:  pop waiting's root  → push onto running (promote)
+remove_slot:  if over capacity: pop running's root  → push onto waiting (demote)</code></pre>
+
+<div class="callout key">
+  <span class="callout-title">The invariant</span>
+  <strong>Every running job outranks every waiting job.</strong> Each operation above preserves it, so it holds forever — and it is what makes the two roots <em>meaningful</em>: running's min and waiting's max are not just each group's edge, they are the two jobs adjacent to the boundary in the whole population's order.
+</div>
+
+<p>Full trace of a session, <var>s</var> starting at 2. Heaps are written root-first — <code>g8</code> means job <code>g</code>, priority 8. Reproduce this table on paper for a different input and you have the pattern:</p>
+
+<table>
+  <tr><th>move</th><th>running (min-heap)</th><th>waiting (max-heap)</th><th>weakest run · strongest wait</th></tr>
+  <tr><td>submit d(4) — not full, push</td><td><strong>d4</strong></td><td>—</td><td>d · —</td></tr>
+  <tr><td>submit e(9) — not full, push</td><td><strong>d4</strong> e9</td><td>—</td><td>d · —</td></tr>
+  <tr><td>submit f(6) — outranks d4: preempt</td><td><strong>f6</strong> e9</td><td><strong>d4</strong></td><td>f · d</td></tr>
+  <tr><td>submit g(8) — outranks f6: preempt</td><td><strong>g8</strong> e9</td><td><strong>f6</strong> d4</td><td>g · f</td></tr>
+  <tr><td>submit c(5) — outranked: waits</td><td><strong>g8</strong> e9</td><td><strong>f6</strong> c5 d4</td><td>g · f</td></tr>
+  <tr><td>remove_slot — demote g8</td><td><strong>e9</strong></td><td><strong>g8</strong> f6 c5 d4</td><td>e · g</td></tr>
+  <tr><td>add_slot — promote g8</td><td><strong>g8</strong> e9</td><td><strong>f6</strong> c5 d4</td><td>g · f</td></tr>
+</table>
+
+<p>Watch <code>g8</code> in the last two rows: demoted and promoted, it crossed the boundary twice — and both times it was a <em>root</em> when it moved. That is not luck; it is the design. The job adjacent to the cut is, by the invariant, always sitting at a root, already in O(1) reach.</p>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">The farm holds 10,000 jobs. How many jobs can a single submit move across the boundary?</p>
+  <button class="quiz-opt">up to half of either side</button>
+  <button class="quiz-opt">at most one job, a root</button>
+  <button class="quiz-opt">every job outranked by the newcomer</button>
+  <p class="quiz-explain">A submit changes the population by one, so the boundary shifts by at most one position — and the job sitting at that position is a root by the invariant. One pop, one push, done. Nothing deeper in either heap is disturbed, which is the entire reason the operation is O(log n) and not O(n).</p>
+</div>
+
+<h2>4. The tuples: two mirrored encodings of one order</h2>
+
+<p>There is one strength order — priority first, then earlier submission — but Python's <code>heapq</code> only builds min-heaps, so each side encodes that order in <em>its own direction</em> (<a href="0004-choosing-key-and-direction.html">Lesson 4</a>'s negation trick, now applied twice, in opposite orientations):</p>
+
+<pre><code>arrival = next(counter)                # unique, ever-increasing — the tie-breaker
+
+running entry:  ( priority, -arrival, name)   # min-root = weakest  (lowest p; tie → latest)
+waiting entry:  (-priority,  arrival, name)   # min-root = strongest (highest p; tie → earliest)</code></pre>
+
+<p>Read the tie logic twice — it points opposite ways on purpose. Among equal priorities, the <em>weakest</em> is the one submitted <em>last</em> (earlier outranks), hence <code>-arrival</code> on the running side; the <em>strongest</em> waiter is the one submitted <em>first</em>, hence bare <code>arrival</code> on the waiting side. The unique <code>arrival</code> also settles every comparison before <code>name</code> is ever reached — <a href="0006-the-heap-of-cursors.html">Lesson 6</a>'s comparable-prefix fence, still on duty.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">Re-encode at the border</span>
+  A job crossing the boundary <strong>cannot keep its tuple</strong>. Popped from running as <code>(p, -a, name)</code>, it must be pushed to waiting as <code>(-p, a, name)</code> — every sign flips. Push the old tuple unchanged and the destination heap orders it nonsensically; nothing crashes, the answers just go quietly wrong. The drill has a test that exists only to catch this.
+</div>
+
+<div class="callout gotcha">
+  <span class="callout-title">A peek is not a pop</span>
+  Both queries read <code>heap[0]</code> and touch nothing. A query that pops "just to look" — or aliases and mutates shared state, as a certain Lesson 6 code review found — changes the farm as a side effect of observing it. The drill runs your queries repeatedly and checks the farm behaves as if they had never happened.
+</div>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">Which direction does each side's heap point?</p>
+  <button class="quiz-opt">running max-heap, waiting min-heap</button>
+  <button class="quiz-opt">running min-heap, waiting min-heap</button>
+  <button class="quiz-opt">running min-heap, waiting max-heap</button>
+  <button class="quiz-opt">running max-heap, waiting max-heap</button>
+  <p class="quiz-explain">Point each root at the boundary: the running group's boundary-side element is its <em>weakest</em> (min-heap), the waiting group's is its <em>strongest</em> (max-heap). Lesson 4's rule — direction opposite to what you keep, or here: direction toward what you must see — decides both in one breath.</p>
+</div>
+
+<h2>5. What it costs</h2>
+
+<p>Every operation is a constant number of root moves, and a root move on a heap of at most <var>n</var> entries is O(log <var>n</var>):</p>
+
+<table>
+  <tr><th>operation</th><th>heap moves</th><th>cost</th></tr>
+  <tr><td>submit — farm not full</td><td>1 push</td><td>O(log n)</td></tr>
+  <tr><td>submit — preemption</td><td>1 pop + 2 pushes</td><td>O(log n)</td></tr>
+  <tr><td>submit — straight to waiting</td><td>1 push</td><td>O(log n)</td></tr>
+  <tr><td>weakest running / strongest waiting</td><td>0 — peek <code>heap[0]</code></td><td>O(1)</td></tr>
+  <tr><td>add_slot / remove_slot</td><td>≤ 1 pop + 1 push</td><td>O(log n)</td></tr>
+  <tr><td><strong>n submits, total</strong></td><td></td><td><strong>O(n log n)</strong></td></tr>
+</table>
+
+<p>Against the baselines: the sorted list pays O(<var>n</var>) <em>per submit</em> — O(<var>n</var>²) total — to maintain a total order nobody asked for; the single heap pays O(<var>n</var>) <em>per query</em> to dig out the end it doesn't serve. The two-heap design maintains exactly as much order as the questions require: perfect knowledge <em>at the cut</em>, cheerful ignorance everywhere else. That economy — order only where the questions are — is the pattern's whole identity.</p>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">One submit into a farm of n jobs costs…</p>
+  <button class="quiz-opt">O(log n): a few root moves</button>
+  <button class="quiz-opt">O(n): rescan the boundary each time</button>
+  <button class="quiz-opt">O(1): amortized across the whole run</button>
+  <p class="quiz-explain">Worst case is the preemption path: pop one root, push twice — three O(log n) moves, constant count. Nothing rescans (the roots already face the boundary), and nothing amortizes to O(1) (each move genuinely sifts a log-depth path, every time).</p>
+</div>
+
+<h2>6. Sources</h2>
+
+<p>This pattern has no single canonical write-up (most treatments jump straight to a famous problem this track will reach soon — avoid searching for it). Its two ingredients, however, are impeccably sourced: the <a href="https://docs.python.org/3/library/heapq.html#priority-queue-implementation-notes">heapq priority-queue implementation notes</a> for tuple entries and tie discipline, and <a href="https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/resources/lecture-8-binary-heaps/">MIT 6.006, Lecture 8</a> for why every root move is O(log n). For the sorted-list baseline's cost, the <a href="https://docs.python.org/3/library/bisect.html#bisect.insort">bisect docs</a> state the O(n) insertion themselves.</p>
+
+<h2>7. The drill</h2>
+
+<p>Now build the farm: <code>lessons/0007-boundary-drill.py</code>, same contract as always — Part A on paper first, then the class, then predictions before running:</p>
+
+<pre><code>python3.14 learning/heap-priority-queue/lessons/0007-boundary-drill.py</code></pre>
+
+<p>The harness checks your answers against an oracle, counts your heap operations per submit, re-runs your queries to prove they don't mutate, and has one test dedicated to the re-encoding gotcha. No solutions live in the file.</p>
+
+<div class="ask-teacher">
+  Anything unclear? Ask your teacher (the agent) — open the workspace and ask away, in Portuguese or English. If a hint doesn't unblock you, say so and ask for a smaller step.
+</div>
+
+<div class="lesson-nav">
+  <span><a href="0006-the-heap-of-cursors.html">← Lesson 6: The Heap of Cursors</a></span>
+  <span><a href="../reference/heap-cheat-sheet.html">Cheat sheet</a></span>
+</div>
+
+</body>
+</html>
