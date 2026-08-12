@@ -256,13 +256,29 @@ loop:  pop the smallest head → emit its record → advance that
   <li><strong>The stdlib name</strong>: <a href="https://docs.python.org/3/library/heapq.html#heapq.merge"><code>heapq.merge(*iterables, key=None, reverse=False)</code></a> — a lazy iterator whose implementation is exactly this. Build it yourself anyway: problems need your own direction, tie rule, and stopping point, and the tuple encoding them is what <code>heapq.merge</code> hides.</li>
 </ul>
 
+<h2>Two heaps, one boundary</h2>
+<p>When the questions live at the <em>cut</em> between two groups — who is on the chopping block, who is next in line — split the population at the cut and point each root AT it: the top group in a <strong>min-heap</strong> (root = its weakest member), the bottom group in a <strong>max-heap</strong> (root = its strongest). The two roots face each other across the boundary; both questions become O(1) peeks.</p>
+
+<div class="callout key">
+  <span class="callout-title">The invariant</span>
+  <strong>Every member of the top group outranks every member of the bottom group.</strong> Each operation preserves it — and it is what makes the roots meaningful: they are not just each group's edge, they are the two elements adjacent to the cut in the whole population's order.
+</div>
+
+<ul>
+  <li><strong>Only roots cross.</strong> One arrival changes the population by one, so the boundary moves by at most one position — and the element at that position sits at a root, by the invariant. Every crossing is pop-one-root, push-other-side: O(log n), never a rebuild.</li>
+  <li><strong>Re-encode at the border</strong> (negation style): with the min-only <code>heapq</code> API the sides carry mirrored tuples — top <code>(p, -arrival, name)</code>, bottom <code>(-p, arrival, name)</code> — and a crossing flips every sign. Forget the flip and nothing crashes; the answers just go quietly wrong. <strong>Python 3.14 makes the re-encode free</strong>: with <code>heapq.heappush_max</code>/<code>heappop_max</code> the SAME tuple serves both sides — but then negating "because crossings re-encode" reintroduces the bug in mirror image. The re-encode was always the <em>price of the negation trick</em>, not part of the pattern. (Earned in the L7 drill.)</li>
+  <li><strong>A peek is not a pop.</strong> Boundary queries read <code>heap[0]</code> and mutate nothing — observing the structure must not change it (P6's alias bug, generalized).</li>
+  <li><strong>Costs</strong>: peek O(1); insert / promote / demote O(log n) each (constant count of root moves); n inserts O(n log n) total. Baselines beaten: one sorted list — <code>bisect.insort</code> is O(log n) search + <a href="https://docs.python.org/3/library/bisect.html#bisect.insort">O(n) insertion</a> per arrival; one heap — O(n) to extract the end it doesn't serve (a heap serves one end).</li>
+  <li><strong>Order only where the questions are</strong>: the pattern maintains perfect knowledge at the cut and cheerful ignorance everywhere else — that economy is why it beats both baselines.</li>
+</ul>
+
 <h2>Patterns (unlocked as the track progresses)</h2>
 <table>
   <tr><th>Pattern</th><th>Signal in the problem</th><th>Lesson</th></tr>
   <tr><td>Top-K</td><td>"k largest / k closest / k most frequent"</td><td>L4 ✅</td></tr>
   <tr><td>Greedy + heap</td><td>"always take the best available next"</td><td>L5 ✅</td></tr>
   <tr><td>Heap of cursors (k-way merge)</td><td>"k sorted sources, one combined order"</td><td>L6 ✅</td></tr>
-  <tr><td>Two heaps</td><td>"running median / balance two halves"</td><td>L7</td></tr>
+  <tr><td>Two heaps, one boundary</td><td>"maintain an ordered cut through changing data"</td><td>L7 ✅</td></tr>
 </table>
 
 <div class="ask-teacher">

@@ -58,15 +58,15 @@ import itertools
 # Leave a value as None to skip it.
 
 BOUNDS: dict[str, str | None] = {
-    "invariant": None,
-    "running_heap": None,
-    "waiting_heap": None,
-    "crossing": None,
+    "invariant": "every running job outranks every waiting job",
+    "running_heap": "min-heap",
+    "waiting_heap": "max-heap",
+    "crossing": "only a root ever crosses, re-encoded for the other side",
 
-    "peek_cost": None,
-    "submit_cost": None,
-    "reslot_cost": None,
-    "total_submits_cost": None,
+    "peek_cost": "O(1)",
+    "submit_cost": "O(log n)",
+    "reslot_cost": "O(log n)",
+    "total_submits_cost": "O(n log n)",
 }
 
 
@@ -116,22 +116,43 @@ class BuildFarm:
     """
 
     def __init__(self, slots: int) -> None:
-        raise NotImplementedError
+        self.counter = itertools.count()
+        self.slots = slots
+        self.running = []
+        self.waiting = []
 
     def submit(self, priority: int, name: str) -> None:
-        raise NotImplementedError
+        job = (priority, -next(self.counter), name)
+        if len(self.running) < self.slots:
+            heapq.heappush(self.running, job)
+            return
+
+        if self.running and job > self.running[0]:
+            weakest_job = heapq.heappop(self.running)
+            heapq.heappush(self.running, job)
+            heapq.heappush_max(self.waiting, (weakest_job[0], weakest_job[1], weakest_job[2]))
+        else:
+            heapq.heappush_max(self.waiting, (job[0], job[1], job[2]))
 
     def weakest_running(self) -> str | None:
-        raise NotImplementedError
+        return self.running[0][2] if self.running else None
 
     def strongest_waiting(self) -> str | None:
-        raise NotImplementedError
+        return self.waiting[0][2] if self.waiting else None
 
     def add_slot(self) -> None:
-        raise NotImplementedError
+        self.slots += 1
+        if self.waiting:
+            priority, arr, name = heapq.heappop_max(self.waiting)
+            heapq.heappush(self.running, (priority, arr, name))
 
     def remove_slot(self) -> None:
-        raise NotImplementedError
+        if self.slots == 0:
+            return
+        if self.running and len(self.running) == self.slots:
+            priority, arr, name = heapq.heappop(self.running)
+            heapq.heappush_max(self.waiting, (priority, arr, name))
+        self.slots -= 1
 
 
 # ----------------------------------------------------------------------------
@@ -168,9 +189,9 @@ class BuildFarm:
 # Write real lists of real values, e.g. ["a", None] — not "[a, None]".
 
 PREDICTIONS: dict[str, list[str | None] | None] = {
-    "C1": None,
-    "C2": None,
-    "C3": None,
+    "C1": ["c", "b"],
+    "C2": ["x", "y", None],
+    "C3": ["p", "r"],
 }
 
 
@@ -328,8 +349,10 @@ def _run_counted(fn, *args):
     """Call fn with heapq instrumented. Returns (result, op_counts, max_heap_size)."""
     counts: dict[str, int] = {}
     max_size = 0
-    names = ("heappush", "heappop", "heappushpop", "heapreplace", "heapify")
-    originals = {n: getattr(heapq, n) for n in names}
+    names = ("heappush", "heappop", "heappushpop", "heapreplace", "heapify",
+             "heappush_max", "heappop_max", "heappushpop_max",
+             "heapreplace_max", "heapify_max")
+    originals = {n: getattr(heapq, n) for n in names if hasattr(heapq, n)}
 
     def wrap(name, real):
         def wrapper(*a, **kw):
@@ -429,7 +452,8 @@ def test_farm_uses_a_heap():
         farm.submit(2, "b")   # must preempt a
         return farm
     _, counts, _ = _run_counted(driver)
-    pushes = counts.get("heappush", 0) + counts.get("heappushpop", 0)
+    pushes = sum(counts.get(n, 0) for n in
+                 ("heappush", "heappushpop", "heappush_max", "heappushpop_max"))
     assert pushes >= 3, (
         f"only {pushes} heap pushes for a fill plus a preemption — the heaps "
         "have to be what holds the jobs, not a list you scan"
