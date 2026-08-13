@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 8 — The Capstone: Everything, Cold</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>The Capstone: Everything, Cold</h1>
+<p class="lesson-meta">Lesson 8 · ~30 min (quiz 10 min + drill 20 min) · <a href="0007-two-heaps-one-boundary.html">← Lesson 7</a> · <a href="../reference/heap-cheat-sheet.html">cheat sheet</a></p>
+
+<p>This lesson teaches nothing new. Seven problems are solved; what remains is the question that decides whether any of it survives the next six months: <strong>can you retrieve it cold?</strong> Fluency — answering while the material is warm — fades. Storage strength is built by exactly what this session does: effortful recall, spaced weeks after learning, with the topics deliberately shuffled out of order.</p>
+
+<div class="callout key">
+  <span class="callout-title">Rules of the capstone</span>
+  First pass <strong>closed-book</strong> — no cheat sheet, no lesson tabs, no peeking at old code. A wrong answer is not a failure; it is a <em>measurement</em> telling you which page of the cheat sheet earns a re-read. After the full pass, review freely.
+</div>
+
+<h2>1. The quiz — six questions, shuffled across seven lessons</h2>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">You need the k LARGEST items from a stream, memory-bounded. Which heap does the job?</p>
+  <button class="quiz-opt">max-heap of size k</button>
+  <button class="quiz-opt">min-heap of size n</button>
+  <button class="quiz-opt">min-heap of size k</button>
+  <button class="quiz-opt">max-heap of size n</button>
+  <p class="quiz-explain">Direction opposite to the selection: keeping the largest means the root must expose the <em>weakest survivor</em> — the one a newcomer has to beat, and the one that gets evicted. A max root would show you the champion, who is never the one in danger. Size k, never n: the heap holds survivors, not history. (Lesson 4.)</p>
+</div>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">A max-heap via negation stores (-priority, ???). Earlier arrival must win priority ties. What goes in?</p>
+  <button class="quiz-opt">arrival, negated</button>
+  <button class="quiz-opt">arrival, unchanged</button>
+  <button class="quiz-opt">name, unchanged</button>
+  <button class="quiz-opt">name, negated</button>
+  <p class="quiz-explain">Negate only what must be reversed. The heap is physically a min-heap, so "wins" = "compares smaller". Highest priority must win → negate it. Earliest arrival must win, and earlier is already smaller → leave it alone. The tiebreaker's sign follows what should win in the heap's real direction, field by field — never "negate everything because it's a max-heap". (Lessons 4–5, and a bug you fixed twice.)</p>
+</div>
+
+<div class="quiz" data-answer="3">
+  <p class="quiz-q">A loop alternates clock-jumps (Q frozen) with executions (Q shrinks). Why is the total still O(Q)?</p>
+  <button class="quiz-opt">each jump halves the distance still left over</button>
+  <button class="quiz-opt">the clock only ever jumps log Q times</button>
+  <button class="quiz-opt">frozen iterations cost nothing because nothing is compared</button>
+  <button class="quiz-opt">each jump is charged to its next execution</button>
+  <p class="quiz-explain">The pairing argument: every jump lands exactly where something becomes eligible, so the very next iteration executes and shrinks Q. Charge each frozen iteration to its executing neighbor: #jumps ≤ #executions ≤ Q, total ≤ 2Q, constant vanishes. You produced this reasoning unprompted on Task Scheduler. (Lesson 5 / LC 621.)</p>
+</div>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">Mid-merge of k sorted lists holding N records in total, the heap's size stays…</p>
+  <button class="quiz-opt">always exactly k</button>
+  <button class="quiz-opt">never above k</button>
+  <button class="quiz-opt">roughly half N</button>
+  <button class="quiz-opt">around log N</button>
+  <p class="quiz-explain">One head per <em>unfinished</em> source — exhausted sources drop out, so the frontier shrinks below k near the end (hence "never above", not "always exactly"). It is never anywhere near N: the heap holds bookmarks, not data, and log(heap size) = log k is the entire reason the merge beats re-sorting. (Lesson 6.)</p>
+</div>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">The exchange argument proves a greedy choice safe by showing what?</p>
+  <button class="quiz-opt">swapping any solution toward the greedy choice never hurts</button>
+  <button class="quiz-opt">the greedy choice stays unique once ties are settled</button>
+  <button class="quiz-opt">every other ordering can be reached by legal swaps</button>
+  <button class="quiz-opt">the heap always serves the best candidate available first</button>
+  <p class="quiz-explain">Take any competing solution, swap one choice to agree with greedy, show the result is no worse — repeat until it IS the greedy solution, never having lost ground. That is what licenses "take the best now and never look back". The heap is just the machine that finds "best now" in O(log n); the argument is what makes using it <em>correct</em>. (Lesson 5, Erickson Ch. 4.)</p>
+</div>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">What does the two-heaps pattern actually maintain, and where does it maintain it?</p>
+  <button class="quiz-opt">total order across the whole population</button>
+  <button class="quiz-opt">sorted halves on both heap sides</button>
+  <button class="quiz-opt">perfect order only at the cut</button>
+  <button class="quiz-opt">heap order plus a global index</button>
+  <p class="quiz-explain">Perfect knowledge at the boundary, cheerful ignorance everywhere else. Neither heap is sorted internally, no global order exists — and that economy is exactly why every operation is O(log n) while the sorted-list baseline pays O(n) per insert maintaining an order nobody queries. (Lesson 7.)</p>
+</div>
+
+<h2>2. The drill — traces and cells, cold</h2>
+
+<p>The written half of the capstone: three hand-traces predicted before running, plus fourteen knowledge cells — costs, failure classes, one bug to classify, and two old friends from the learning records who came back to check on you:</p>
+
+<pre><code>python3.14 learning/heap-priority-queue/lessons/0008-capstone-drill.py</code></pre>
+
+<p>Same contract as every drill: fill, then run, immediate verdicts. Closed-book on the first pass — the point is to find out what stuck, not to score 17/17 on the first try.</p>
+
+<h2>3. After the capstone</h2>
+
+<p>Whatever the drill marks red, re-read that one section of the <a href="../reference/heap-cheat-sheet.html">cheat sheet</a> — it exists precisely for this. Then ask your teacher for the <strong>closing debrief of the track</strong>: results, what to re-test in a month, and what comes after heaps. And a real spaced-repetition move, now that the embargo is lifted: watch NeetCode's walkthroughs of the seven problems you already solved and argue with them — every place their design differs from yours (fixed-side median vs your capacity rule, for one) is retrieval practice with an opinion.</p>
+
+<div class="ask-teacher">
+  Anything unclear — or ready for the closing debrief? Ask your teacher (the agent), in Portuguese or English.
+</div>
+
+<div class="lesson-nav">
+  <span><a href="0007-two-heaps-one-boundary.html">← Lesson 7: Two Heaps, One Boundary</a></span>
+  <span><a href="../reference/heap-cheat-sheet.html">Cheat sheet</a></span>
+</div>
+
+</body>
+</html>
