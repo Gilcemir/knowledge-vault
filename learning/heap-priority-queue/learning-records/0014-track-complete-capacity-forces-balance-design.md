@@ -1,0 +1,11 @@
+# Track complete (7/7 solo); P7 solved with an original capacity-forces-balance design
+
+On P7 (LC 295, Hard, solved solo 2026-08-12 with only the thin handover), Gil completed the problem track: all 7 NeetCode heap problems solved independently, zero solutions given — the mission's core success criterion. His design is not the textbook one: instead of fixing which heap holds the odd element ("lower always keeps the extra"), he capped BOTH sides at `slots() = ceil(n/2)` — the L7 farm's capacity concept transplanted, method name included — and let the extra land on either side, resolving it only at read time by comparing lengths. The balance proof his design rests on: both sides ≤ ceil(n/2) and sizes summing to n force every side ≥ floor(n/2), so the split is always {floor, ceil}. Balance emerges from capacity; no explicit rebalance step exists.
+
+**Evidence**: Accepted on LeetCode (and note: the judge accepted `heapq.heappush_max`, confirming the platform runs ≥3.14). Cost table right first pass, boring rows included — `slots()` O(1), both `addNum` paths O(log n), both `findMedian` paths O(1), total O(n log n). The per-phase-cost demand (LR-0006/0009/0010 lineage) now appears fully automatic on request; still never volunteered unasked — L8 should test whether he offers it cold. `heappushpop` chosen correctly in both overflow branches (the L3/P1 `heappushpop`-vs-`heapreplace` distinction, applied under pressure without prompting).
+
+**Implications**:
+
+- Pattern transfer is now demonstrated across all four composition problems (P5 gate, P6 cursors, P7 boundary) — each lesson's machinery reused with the adaptation step done by him. The lesson→problem spoiler discipline goes 4/4.
+- L8 (capstone) is all that remains. Cold re-test list accumulated: `heappushpop` vs `heapreplace` derivation (LR-0005), heapify-all vs bounded-heap axes tension (L4), alias-vs-copy in a query (LR-0013), failure-class vocabulary (LR-0013), one cold prediction trace (L7's Part C confusion), one increasing-Q distractor (LR-0011), and whether he volunteers complexity unasked.
+- Post-solve wisdom step now mission-compliant: NeetCode's videos and the LC Discuss tab were embargoed until honest solo attempts — with the track complete, comparing his designs against the community's is the next source of depth.
