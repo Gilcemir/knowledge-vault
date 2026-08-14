@@ -41,9 +41,9 @@ import itertools
 #       Answer with the two query results in order.
 
 PREDICTIONS: dict[str, list | None] = {
-    "P1": None,
-    "P2": None,
-    "P3": None,
+    "P1": [4, 7, 9],
+    "P2": ["api-1","web-1" , "api-2"],
+    "P3": ['y', 'z'],
 }
 
 
@@ -114,24 +114,24 @@ PREDICTIONS: dict[str, list | None] = {
 #         "TypeError: '<' not supported between instances of 'dict' and 'dict'".
 
 KNOWLEDGE: dict[str, str | None] = {
-    "build_heap_cost": None,
-    "pops_phase_cost": None,
-    "nsmallest_cost": None,
-    "first_r_cost": None,
+    "build_heap_cost": "O(n)",
+    "pops_phase_cost": "O(k log n)",
+    "nsmallest_cost": "O(n log k)",
+    "first_r_cost": "O(k + r log k)",
 
-    "stream_survivor": None,
-    "time_winner_small_k": None,
+    "stream_survivor": "bounded heap",
+    "time_winner_small_k": "heapify all",
 
-    "bounded_heap_breaker": None,
-    "breaker_reason": None,
+    "bounded_heap_breaker": "heapreplace",
+    "breaker_reason": "it evicts the root even when the newcomer loses",
 
-    "q_metric": None,
-    "alias_bug": None,
-    "reencode_314": None,
+    "q_metric": "stones still in the heap",
+    "alias_bug": "the query mutates shared state through an alias",
+    "reencode_314": "the same tuple serves both sides",
 
-    "failure_f1": None,
-    "failure_f2": None,
-    "failure_f3": None,
+    "failure_f1": "wrong output",
+    "failure_f2": "syntax error",
+    "failure_f3": "runtime error",
 }
 
 
