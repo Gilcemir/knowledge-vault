@@ -49,8 +49,8 @@ There are no solutions in this file.
 #       What does f([1, 2]) return now? Same answer format.
 
 PREDICTIONS: dict[str, list | None] = {
-    "P1": None,
-    "P2": None,
+    "P1": [[1, 2], [1], [2], []],
+    "P2": [[], [], [], []],
 }
 
 
@@ -95,13 +95,13 @@ PREDICTIONS: dict[str, list | None] = {
 #     "O(2^n)"   "O(n * 2^n)"   "O(n^2)"   "O(n!)"
 
 KNOWLEDGE: dict[str, str | None] = {
-    "subsets_leaves": None,
-    "perms_leaves": None,
-    "undo_step": None,
-    "copy_reason": None,
-    "prune_rule": None,
-    "used_marker": None,
-    "subsets_total_cost": None,
+    "subsets_leaves": "2^n",
+    "perms_leaves": "n!",
+    "undo_step": "the shared path, so the next branch starts from the same state",
+    "copy_reason": "append stores a reference and the list keeps mutating",
+    "prune_rule": "cannot lead to any valid answer from this state",
+    "used_marker": "a used flag per element, cleared when the call backtracks",
+    "subsets_total_cost": "O(n * 2^n)",
 }
 
 

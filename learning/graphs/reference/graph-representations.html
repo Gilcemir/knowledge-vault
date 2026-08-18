@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference — Graph Representations</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1>Graph Representations — Cheat Sheet</h1>
+<p class="lesson-meta">Graphs track reference · source lesson: <a href="../lessons/0003-graph-anatomy.html">L1 — Graph Anatomy</a> · grounded in <a href="https://jeffe.cs.illinois.edu/teaching/algorithms/book/05-graphs.pdf">Erickson ch. 5, §5.4</a></p>
+
+<h2>Adjacency list (the default)</h2>
+
+<pre><code>adj: dict[int, list[int]] = {v: [] for v in range(n)}   # 1. EVERY vertex gets a key
+for u, v in edges:                                      # 2. file each edge
+    adj[u].append(v)
+    adj[v].append(u)          # undirected only — drop this line if directed</code></pre>
+
+<ul>
+  <li><strong>Step 1 before step 2</strong> — isolated vertices must exist as keys, or component counts and visits go wrong later.</li>
+  <li>Directed vs undirected is exactly one line: the reverse append.</li>
+</ul>
+
+<h2>Grid as implicit graph (no construction at all)</h2>
+
+<pre><code>DIRS: tuple[tuple[int, int], ...] = ((-1, 0), (1, 0), (0, -1), (0, 1))  # U D L R
+
+for dr, dc in DIRS:
+    nr, nc = r + dr, c + dc
+    if 0 &lt;= nr &lt; len(grid) and 0 &lt;= nc &lt; len(grid[0]):
+        ...  # (nr, nc) is a real neighbor</code></pre>
+
+<ul>
+  <li>Rows bounded by <code>len(grid)</code>, cols by <code>len(grid[0])</code> — non-square grids punish swapping them.</li>
+  <li><code>grid[-1]</code> <em>wraps</em> in Python, it never raises — the <code>0 &lt;=</code> half of the check is not optional.</li>
+  <li>Corners have 2 neighbors, edges 3, interior 4.</li>
+</ul>
+
+<h2>Cost table</h2>
+
+<table>
+  <tr><th></th><th>Adjacency list</th><th>Adjacency matrix</th></tr>
+  <tr><td>Space</td><td><span class="good">O(V + E)</span></td><td><span class="bad">O(V²)</span></td></tr>
+  <tr><td>"Is (u, v) an edge?"</td><td>O(deg(u))</td><td><span class="good">O(1)</span></td></tr>
+  <tr><td>Visit u's neighbors</td><td><span class="good">O(deg(u))</span></td><td><span class="bad">O(V)</span></td></tr>
+  <tr><td>Build</td><td>O(V + E)</td><td>O(V²)</td></tr>
+</table>
+
+<p><strong>Rule of thumb:</strong> traversals ask "visit my neighbors" constantly → list wins. Matrix is defensible only for small, dense graphs or edge-existence-heavy workloads. Sparse (E ≪ V²) + matrix = the wrong call.</p>
+
+<h2>Mini-glossary</h2>
+
+<table>
+  <tr><td><strong>graph</strong></td><td>a set of vertices plus the edges connecting them — dots and lines</td></tr>
+  <tr><td><strong>vertex / node (V)</strong></td><td>a point in the graph; V = how many there are; grids: one cell = one vertex</td></tr>
+  <tr><td><strong>edge (E)</strong></td><td>a connection between two vertices; E = how many there are</td></tr>
+  <tr><td><strong>undirected / directed</strong></td><td>edges work both ways (friendship) / one-way arrows (Twitter follow)</td></tr>
+  <tr><td><strong>neighbors of u</strong></td><td>the vertices sharing an edge with u</td></tr>
+  <tr><td><strong>deg(u)</strong></td><td>number of neighbors of u</td></tr>
+  <tr><td><strong>traversal</strong></td><td>an algorithm that walks the graph vertex by vertex, following edges (DFS, BFS)</td></tr>
+  <tr><td><strong>sparse / dense</strong></td><td>E far below V² / E near V²</td></tr>
+  <tr><td><strong>implicit graph</strong></td><td>neighbors computed by a rule, never stored (grids, word ladders)</td></tr>
+  <tr><td><strong>isolated vertex</strong></td><td>vertex with no edges — must still exist in the representation</td></tr>
+</table>
+
+</body>
+</html>

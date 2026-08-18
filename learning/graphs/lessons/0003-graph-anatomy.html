@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L1 — Graph Anatomy: Build the Map</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>L1 — Graph Anatomy: Build the Map</h1>
+<p class="lesson-meta">Graphs track · lesson 1 of the main line · ~25 min + drill · 2026-08-17</p>
+
+<h2>The problem first — five people, four friendships</h2>
+
+<p>A tiny social network. Five people, numbered 0 to 4. Four friendships: 0–1, 1–2, 2–0, 1–3. Friendship is <em>mutual</em> — if 0 is friends with 1, then 1 is friends with 0. Person 4 knows nobody. Drawn out:</p>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 330 165" width="330" height="165" role="img" aria-label="Five circles numbered 0 to 4; lines connect 0-1, 1-2, 2-0, and 1-3; circle 4 stands alone">
+    <line x1="60" y1="45" x2="160" y2="45" stroke="#555" stroke-width="2"/>
+    <line x1="160" y1="45" x2="110" y2="125" stroke="#555" stroke-width="2"/>
+    <line x1="110" y1="125" x2="60" y2="45" stroke="#555" stroke-width="2"/>
+    <line x1="160" y1="45" x2="255" y2="45" stroke="#555" stroke-width="2"/>
+    <circle cx="60" cy="45" r="15" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="160" cy="45" r="15" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="110" cy="125" r="15" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="255" cy="45" r="15" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="255" cy="125" r="15" fill="#fdfdfa" stroke="#0f766e" stroke-width="2" stroke-dasharray="4 3"/>
+    <text x="60" y="50" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">0</text>
+    <text x="160" y="50" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">1</text>
+    <text x="110" y="130" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">2</text>
+    <text x="255" y="50" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">3</text>
+    <text x="255" y="130" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">4</text>
+    <text x="255" y="158" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#555">no friends</text>
+  </svg>
+</figure>
+
+<p>That drawing is a <strong>graph</strong> — the entire object of this track. Every term you'll meet from here on is just a name for something in this picture:</p>
+
+<table>
+  <tr><th>Term</th><th>In the picture</th></tr>
+  <tr><td><strong>vertex</strong> (or <strong>node</strong>)</td><td>a dot — one person. Plural: <em>vertices</em>. <strong>V</strong> is the count of them: here V = 5.</td></tr>
+  <tr><td><strong>edge</strong></td><td>a line joining two dots — one friendship. <strong>E</strong> is the count: here E = 4.</td></tr>
+  <tr><td><strong>neighbors</strong> of u</td><td>the vertices sharing an edge with u. 1's neighbors: 0, 2, 3.</td></tr>
+  <tr><td><strong>degree</strong>, written <strong>deg(u)</strong></td><td>how many neighbors u has. deg(1) = 3, deg(4) = 0.</td></tr>
+  <tr><td><strong>undirected</strong></td><td>edges work both ways — "friendship is mutual" made formal. (One-way arrows, like a Twitter <em>follow</em>, make a <strong>directed</strong> graph — later in the track.)</td></tr>
+  <tr><td><strong>isolated vertex</strong></td><td>a vertex with no edges at all — person 4.</td></tr>
+</table>
+
+<p>LeetCode never hands you the drawing. It hands you the ingredients to reconstruct it — a vertex count and an <strong>edge list</strong>:</p>
+
+<pre><code>n = 5                                      # vertices are numbered 0 .. n-1
+edges = [[0, 1], [1, 2], [2, 0], [1, 3]]   # each pair [u, v] is one edge</code></pre>
+
+<p>Each inner pair <code>[u, v]</code> says "there is a line between dot u and dot v" — <code>[0, 1]</code> is the 0–1 friendship, and so on. Because this graph is undirected, <code>[0, 1]</code> and <code>[1, 0]</code> would mean the same thing. Vertex 4 appears nowhere in <code>edges</code> — only <code>n = 5</code> tells you it exists.</p>
+
+<p>Now answer, quickly: <em>who are 1's neighbors?</em></p>
+
+<p>You already read them off the drawing — but the program has no drawing, only the list. It must scan <strong>all of it</strong>, checking both ends of every pair: <code>[0,1]</code> yes, <code>[1,2]</code> yes, <code>[2,0]</code> no, <code>[1,3]</code> yes → {0, 2, 3}. That's one full pass over every edge for <em>one</em> question.</p>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">Answering "who are u's neighbors?" straight from an edge list with E edges costs:</p>
+  <button class="quiz-opt">O(1)</button>
+  <button class="quiz-opt">O(E)</button>
+  <button class="quiz-opt">O(V)</button>
+  <button class="quiz-opt">O(deg(u))</button>
+  <p class="quiz-explain">Every edge must be inspected — u could appear anywhere in the list. Every graph algorithm asks this question thousands of times, so paying O(E) each time is fatal.</p>
+</div>
+
+<p>A <strong>traversal</strong> is an algorithm that walks the graph vertex by vertex, following edges. Every traversal you'll write in this track (DFS, BFS, topological sort — all introduced in later lessons) asks "who are u's neighbors?" over and over, thousands of times. The fix is to pay once, up front, to reorganize the data around exactly that question.</p>
+
+<h2>The adjacency list: build the map once</h2>
+
+<p>An <strong>adjacency list</strong> maps each vertex to the list of its neighbors. In Python: a <code>dict[int, list[int]]</code>. Build it in two steps — and the order matters:</p>
+
+<pre><code>adj: dict[int, list[int]] = {v: [] for v in range(n)}   # step 1: every vertex exists
+for u, v in edges:                                      # step 2: file each edge
+    adj[u].append(v)
+    adj[v].append(u)      # undirected: friendship goes both ways</code></pre>
+
+<p>Trace it on paper (your method — one row per edge processed):</p>
+
+<table>
+  <tr><th>#</th><th>Edge</th><th><code>adj</code> after</th></tr>
+  <tr><td>0</td><td>— (step 1)</td><td><code>{0: [], 1: [], 2: [], 3: [], 4: []}</code></td></tr>
+  <tr><td>1</td><td><code>[0, 1]</code></td><td><code>{0: [1], 1: [0], 2: [], 3: [], 4: []}</code></td></tr>
+  <tr><td>2</td><td><code>[1, 2]</code></td><td><code>{0: [1], 1: [0, 2], 2: [1], 3: [], 4: []}</code></td></tr>
+  <tr><td>3</td><td><code>[2, 0]</code></td><td><code>{0: [1, 2], 1: [0, 2], 2: [1, 0], 3: [], 4: []}</code></td></tr>
+  <tr><td>4</td><td><code>[1, 3]</code></td><td><code>{0: [1, 2], 1: [0, 2, 3], 2: [1, 0], 3: [1], 4: []}</code></td></tr>
+</table>
+
+<p>Now "who are 1's friends?" is <code>adj[1]</code> — a dictionary lookup, then you read exactly deg(1) names. No scanning.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">The isolated-vertex trap</span>
+  Look at vertex <strong>4</strong>: no edges, but it exists — step 1 gave it a key. If you build keys only while walking the edge list (<code>setdefault</code>-style), vertex 4 silently vanishes. Two lessons from now, "count connected components" will need to <em>visit</em> vertex 4; a map that lost it gives the wrong count. Every-vertex-gets-a-key is step 1 for a reason.
+</div>
+
+<div class="callout key">
+  <span class="callout-title">Directed vs undirected — one line of difference</span>
+  Directed edge u → v: only <code>adj[u].append(v)</code>. Undirected: both appends. That single line is the whole difference, and forgetting which graph you're in is the classic source of "why is my traversal walking backwards?"
+</div>
+
+<h2>The grid: a graph you never build</h2>
+
+<p>Seven of your thirteen roadmap problems hand you not an edge list but a <strong>grid</strong>:</p>
+
+<pre><code>grid = [["1", "1", "0", "0"],
+        ["1", "0", "0", "1"],
+        ["0", "0", "1", "1"]]     # 3 rows, 4 cols</code></pre>
+
+<p>This <em>is</em> a graph — each cell is a vertex, and its edges go up/down/left/right — but nobody stores an adjacency list for it. The neighbors of <code>(r, c)</code> are <em>computed on demand</em>:</p>
+
+<pre><code>for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):   # up, down, left, right
+    nr, nc = r + dr, c + dc
+    if 0 &lt;= nr &lt; len(grid) and 0 &lt;= nc &lt; len(grid[0]):
+        ...  # (nr, nc) is a real neighbor</code></pre>
+
+<p>This is called an <strong>implicit graph</strong>: the structure exists in the rules, not in memory. Same anatomy, zero construction cost.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">Python's negative-index trap</span>
+  <code>grid[-1][c]</code> does not raise — it politely returns the <em>last</em> row. So a missing <code>0 &lt;=</code> check doesn't crash; it silently glues the top of your grid to the bottom, and your island count comes out wrong with no error anywhere. The bounds check must reject negatives <em>explicitly</em>.
+</div>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">How many in-bounds 4-directional neighbors does corner cell (0, 0) of a 3×4 grid have?</p>
+  <button class="quiz-opt">4</button>
+  <button class="quiz-opt">3</button>
+  <button class="quiz-opt">2</button>
+  <button class="quiz-opt">1</button>
+  <p class="quiz-explain">Up is (−1, 0) and left is (0, −1) — both out of bounds. Only down (1, 0) and right (0, 1) survive. Corners keep 2, edges keep 3, interior cells keep 4.</p>
+</div>
+
+<h2>The matrix — and when it's the wrong call</h2>
+
+<p>The other classic representation is the <strong>adjacency matrix</strong>: a V×V table where <code>matrix[u][v]</code> is 1 if the edge exists. Compare the costs (this table is the K-cells of your drill — earn it now):</p>
+
+<table>
+  <tr><th></th><th>Adjacency list</th><th>Adjacency matrix</th></tr>
+  <tr><td>Space</td><td><span class="good">O(V + E)</span></td><td><span class="bad">O(V²)</span></td></tr>
+  <tr><td>"Is (u, v) an edge?"</td><td>O(deg(u)) — scan u's list</td><td><span class="good">O(1)</span> — one cell</td></tr>
+  <tr><td>Visit all neighbors of u</td><td><span class="good">O(deg(u))</span></td><td><span class="bad">O(V)</span> — walk the whole row, zeros included</td></tr>
+</table>
+
+<p>The matrix wins exactly one race: the O(1) edge-existence check. It pays for it with O(V²) memory and O(V) per neighbor scan — <em>whether or not the edges exist</em>. Most real graphs are <strong>sparse</strong> (E far below V²), and traversals ask "visit my neighbors" far more often than "does this one edge exist", so the adjacency list is the default. Reach for a matrix only when the graph is small and dense, or edge-existence checks dominate.</p>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">A graph has 10⁵ vertices and 2×10⁵ edges. How many cells does its adjacency matrix hold?</p>
+  <button class="quiz-opt">10^10</button>
+  <button class="quiz-opt">10^5</button>
+  <button class="quiz-opt">2*10^5</button>
+  <button class="quiz-opt">4*10^5</button>
+  <p class="quiz-explain">V² = (10⁵)² = 10¹⁰ cells — roughly 10 GB to store 200,000 edges. That is "sparse: E far below V²" in one picture, and why the matrix is the wrong call here.</p>
+</div>
+
+<h2>Your drill</h2>
+
+<div class="callout try-it">
+  <span class="callout-title">Drill 0004 (closed-book, ~20 min)</span>
+  <ol>
+    <li><strong>Close this lesson.</strong> The drill is retrieval practice — the whole point is rebuilding this from memory.</li>
+    <li>Open <code>lessons/0004-graph-anatomy-drill.py</code>: implement <code>build_adj</code> and <code>grid_neighbors</code>, fill the six K-cells.</li>
+    <li>Run: <code>python3.14 learning/graphs/lessons/0004-graph-anatomy-drill.py</code></li>
+    <li>Report the output to your teacher, reds included. All green opens L2 — DFS on a graph with cycles, where the map you built here finally gets walked.</li>
+  </ol>
+</div>
+
+<h2>Primary source</h2>
+
+<p>Jeff Erickson, <a href="https://jeffe.cs.illinois.edu/teaching/algorithms/book/05-graphs.pdf"><em>Algorithms</em>, Chapter 5: Basic Graph Algorithms</a> — read §5.4 (Data Structures), a few pages on exactly these representations and their costs. Backup with visuals: <a href="https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/resources/lecture-9-breadth-first-search/">MIT 6.006 Lecture 9</a> covers the same ground in the first minutes.</p>
+
+<p>Quick-reference version of this lesson (keep it for the whole track): <a href="../reference/graph-representations.html">Graph representations cheat sheet</a>.</p>
+
+<div class="ask-teacher">
+  Anything unclear — why the dict beats a list of lists, why sparse graphs dominate interviews, or any term from the vocabulary table that didn't stick — ask your teacher in the chat.
+</div>
+
+<div class="lesson-nav">
+  <span>← <a href="0002-recursion-tree-patch.html">Patch — count the tree</a></span>
+  <span>Next: L2 — DFS on a graph with cycles (unlocks at drill all-green)</span>
+</div>
+
+</body>
+</html>

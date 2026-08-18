@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patch — Count the Tree Before You Trust It</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>Patch: Count the Tree Before You Trust It</h1>
+<p class="lesson-meta">Graphs track · patch lesson (triggered by D0 reds) · ~25 min · 2026-08-17</p>
+
+<h2>What the diagnostic actually said</h2>
+
+<p>Your first pass on <a href="0001-backtracking-diagnostic.py">D0</a> was 5/9. Look at the reds together:</p>
+
+<table>
+  <tr><th>Cell</th><th>You said</th><th>Truth</th></tr>
+  <tr><td>P1 — subsets, traced</td><td><code>[[1,2], [1,2], [1,2]]</code> — <span class="bad">3 leaves</span></td><td><code>[[1,2], [1], [2], []]</code> — 4 leaves</td></tr>
+  <tr><td>P2 — missing copy</td><td><code>[[], [], []]</code> — <span class="bad">3 leaves</span></td><td><code>[[], [], [], []]</code> — 4 leaves</td></tr>
+  <tr><td>K1 — leaves for n items</td><td><span class="bad"><code>n^2</code></span></td><td><code>2^n</code></td></tr>
+  <tr><td>K7 — total subsets cost</td><td><span class="bad"><code>O(n^2)</code></span></td><td><code>O(n * 2^n)</code></td></tr>
+</table>
+
+<p>Four reds, <strong>one</strong> root cause: you never drew the tree, so you guessed its size. Meanwhile K3–K6 were green — you know why <code>pop</code> exists, why the leaf copies, when a prune is legal, when the used flag is released. The <em>mechanics</em> of backtracking stuck. What's missing is the <em>shape</em>: how big the tree is and what it costs. That's this patch. Nothing else.</p>
+
+<p>Your P2 answer even contained the hard insight (every append aliased one list that ends empty) — you only miscounted how many appends happen. So: let's count.</p>
+
+<h2>Draw the tree — all of it</h2>
+
+<p>The P1 code makes one <strong>binary decision per element</strong>: take it or skip it. Two calls, always — <code>dfs(i+1)</code> after the append <em>and</em> <code>dfs(i+1)</code> after the pop. For <code>[1, 2]</code>:</p>
+
+<pre><code>                     dfs(0)  path=[]
+                   /                \
+             take 1                  skip 1
+                 /                     \
+        dfs(1) path=[1]           dfs(1) path=[]
+         /          \              /          \
+    take 2        skip 2       take 2       skip 2
+       /              \          /              \
+ dfs(2)           dfs(2)     dfs(2)          dfs(2)
+ [1,2]             [1]        [2]              []
+  leaf #1         leaf #2    leaf #3         leaf #4</code></pre>
+
+<p>Every internal node has <strong>exactly two children</strong>. So the level widths are 1, 2, 4, 8, … — the leaf count is always a power of 2. A 3-leaf prediction isn't just wrong, it's <em>structurally impossible</em> for this code. That's the sanity check you now own: <em>count the leaves before predicting the output.</em></p>
+
+<h2>Now trace it — the pop happens <em>between</em> the two calls</h2>
+
+<p>Your P1 answer (<code>[1,2]</code> three times) says the trace skipped the moment where <code>pop</code> runs and the <em>second</em> recursive call starts from a shorter path. On paper, the full state table for <code>f([1, 2])</code>:</p>
+
+<table>
+  <tr><th>#</th><th>Where</th><th>Action</th><th><code>path</code> after</th><th><code>res</code> after</th></tr>
+  <tr><td>1</td><td>dfs(0)</td><td>append 1, call dfs(1)</td><td><code>[1]</code></td><td><code>[]</code></td></tr>
+  <tr><td>2</td><td>dfs(1)</td><td>append 2, call dfs(2)</td><td><code>[1, 2]</code></td><td><code>[]</code></td></tr>
+  <tr><td>3</td><td>dfs(2)</td><td><strong>leaf</strong> — snapshot</td><td><code>[1, 2]</code></td><td><code>[[1,2]]</code></td></tr>
+  <tr><td>4</td><td>back in dfs(1)</td><td>pop 2, call dfs(2)</td><td><code>[1]</code></td><td><code>[[1,2]]</code></td></tr>
+  <tr><td>5</td><td>dfs(2)</td><td><strong>leaf</strong> — snapshot</td><td><code>[1]</code></td><td><code>[[1,2], [1]]</code></td></tr>
+  <tr><td>6</td><td>back in dfs(0)</td><td>pop 1, call dfs(1)</td><td><code>[]</code></td><td><code>[[1,2], [1]]</code></td></tr>
+  <tr><td>7</td><td>dfs(1)</td><td>append 2, call dfs(2)</td><td><code>[2]</code></td><td><code>[[1,2], [1]]</code></td></tr>
+  <tr><td>8</td><td>dfs(2)</td><td><strong>leaf</strong> — snapshot</td><td><code>[2]</code></td><td><code>[[1,2], [1], [2]]</code></td></tr>
+  <tr><td>9</td><td>back in dfs(1)</td><td>pop 2, call dfs(2)</td><td><code>[]</code></td><td><code>[[1,2], [1], [2]]</code></td></tr>
+  <tr><td>10</td><td>dfs(2)</td><td><strong>leaf</strong> — snapshot</td><td><code>[]</code></td><td><code>[[1,2], [1], [2], []]</code></td></tr>
+</table>
+
+<div class="callout key">
+  <span class="callout-title">The one fact this patch exists for</span>
+  Each of the <code>n</code> elements doubles the tree: <strong>leaves = 2<sup>n</sup></strong>. Different leaves see different paths because the pop runs <em>between</em> the take-branch and the skip-branch — that's the same green fact you already had in K3, now applied to counting.
+</div>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">How many leaves does the subsets tree on 3 distinct items have?</p>
+  <button class="quiz-opt">6</button>
+  <button class="quiz-opt">8</button>
+  <button class="quiz-opt">9</button>
+  <button class="quiz-opt">16</button>
+  <p class="quiz-explain">Three binary decisions: 2 × 2 × 2 = 2³ = 8. Level widths go 1, 2, 4, 8 — never 6 or 9, those aren't powers of two.</p>
+</div>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">Which subset does <code>f([1, 2, 3])</code> append to <code>res</code> LAST?</p>
+  <button class="quiz-opt">[1,2,3]</button>
+  <button class="quiz-opt">[3]</button>
+  <button class="quiz-opt">[]</button>
+  <button class="quiz-opt">[2,3]</button>
+  <p class="quiz-explain">The take-branch always recurses before the skip-branch, so all-take (<code>[1,2,3]</code>) is first and all-skip (<code>[]</code>) is last.</p>
+</div>
+
+<h2>What the whole tree costs</h2>
+
+<p>K7 asked for <em>total</em> work, "including materializing each subset at the leaf". Two numbers, multiplied:</p>
+
+<table>
+  <tr><th>Quantity</th><th>Value</th><th>Why</th></tr>
+  <tr><td>How many leaves</td><td>2<sup>n</sup></td><td>one binary decision per element</td></tr>
+  <tr><td>Work per leaf</td><td>up to n</td><td><code>path.copy()</code> copies up to n items</td></tr>
+  <tr><td><strong>Total</strong></td><td><strong>O(n · 2<sup>n</sup>)</strong></td><td>leaves × per-leaf copy — the copies are not free</td></tr>
+</table>
+
+<p>This multiplication — <em>count the nodes, then multiply by the work at each node</em> — is the exact cost argument Erickson makes for every backtracking algorithm, and it's the same one you'll use in two lessons for graphs: DFS cost = (vertices visited) × (work per vertex) + (edges scanned). Same muscle.</p>
+
+<div class="quiz" data-answer="3">
+  <p class="quiz-q">n = 10 gives 1,024 leaves, and each leaf copies up to 10 items. Roughly how many operations in total?</p>
+  <button class="quiz-opt">about 100</button>
+  <button class="quiz-opt">about 1,024</button>
+  <button class="quiz-opt">about 1,048,576</button>
+  <button class="quiz-opt">about 10,240</button>
+  <p class="quiz-explain">1,024 leaves × ~10 copied items each ≈ 10,240 — that's n · 2ⁿ. Answering 1,024 is counting leaves but pretending the copies are free.</p>
+</div>
+
+<div class="callout gotcha">
+  <span class="callout-title">Why this gates the Graphs track</span>
+  DFS on a graph is this same engine — the <code>visited</code> set you'll meet in L2 is K6's used flag with one brutal difference: it is <em>never</em> released. If you can't see the tree a DFS walks, you can't say what a graph traversal costs. That's why this patch came before L1.
+</div>
+
+<h2>Close the loop — go back to D0</h2>
+
+<div class="callout try-it">
+  <span class="callout-title">Your drill (do it now, ~10 min)</span>
+  <ol>
+    <li><strong>Close this lesson.</strong> On paper, redraw the tree for <code>f([1, 2])</code> and rebuild the 10-row state table from memory.</li>
+    <li>From <em>your paper</em> — not from this page — fix the four red cells in <a href="0001-backtracking-diagnostic.py">the D0 file</a>: P1, P2, K1, K7.</li>
+    <li>Re-run: <code>python3.14 learning/graphs/lessons/0001-backtracking-diagnostic.py</code></li>
+    <li>Report the output to your teacher. 9/9 green closes the patch and opens L1 (graph anatomy).</li>
+  </ol>
+</div>
+
+<h2>Primary source</h2>
+
+<p>Jeff Erickson, <a href="https://jeffe.cs.illinois.edu/teaching/algorithms/book/02-backtracking.pdf"><em>Algorithms</em>, Chapter 2: Backtracking</a> — read §2.3's recursion-tree cost argument (a few pages, free PDF). It's the canonical version of the leaves-times-work multiplication you just did.</p>
+
+<div class="ask-teacher">
+  Anything unclear — why the pop sits between the two calls, why leaf counts double, why the copy costs n — ask your teacher in the chat. That's what the teacher is for.
+</div>
+
+<div class="lesson-nav">
+  <span>← <a href="0001-backtracking-diagnostic.py">D0 — backtracking diagnostic</a></span>
+  <span>Next: L1 — graph anatomy (unlocks at 9/9)</span>
+</div>
+
+</body>
+</html>
