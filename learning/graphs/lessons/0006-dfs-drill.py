@@ -30,7 +30,20 @@ def reachable(n: int, edges: list[list[int]], start: int) -> set[int]:
         no matter which order the pair is written in.
       - Return a set of ints.
     """
-    raise NotImplementedError
+    adjs = {edge:[] for edge in range(n)}
+    for u, v in edges:
+        adjs[u].append(v)
+        adjs[v].append(u)
+
+    seen = set()
+    def dfs(u: int) -> None:
+        seen.add(u)
+        for v in adjs[u]:
+            if v not in seen:
+                dfs(v)
+    dfs(start)
+
+    return seen
 
 
 def region(grid: list[list[str]], r: int, c: int) -> set[tuple[int, int]]:
@@ -45,7 +58,18 @@ def region(grid: list[list[str]], r: int, c: int) -> set[tuple[int, int]]:
         your flood must survive them.
       - Return a set of (row, col) tuples.
     """
-    raise NotImplementedError
+    x, y = len(grid), len(grid[0])
+    t = grid[r][c]
+    seen: set[tuple[int, int]] = set()
+    def dfs(rr:int, cc: int) -> None:
+        seen.add((rr, cc))
+        for i, j in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+            nr, nc = rr + i, cc + j
+            if 0 <= nr < x and 0 <= nc < y and grid[nr][nc] == t and (nr, nc) not in seen:
+                dfs(nr, nc)
+
+    dfs(r, c)
+    return seen
 
 
 # ----------------------------------------------------------------------------
@@ -88,12 +112,12 @@ def region(grid: list[list[str]], r: int, c: int) -> set[tuple[int, int]]:
 #     "1"   "2"   "3"   "5"
 
 KNOWLEDGE: dict[str, str | None] = {
-    "dfs_total_cost": None,
-    "visited_why": None,
-    "visited_mark_moment": None,
-    "visited_unmark": None,
-    "edge_examinations": None,
-    "dfs_launches": None,
+    "dfs_total_cost": "O(V + E)",
+    "visited_why": "cycles would make the recursion revisit forever",
+    "visited_mark_moment": "the moment u is entered, before recursing",
+    "visited_unmark": "never: reachability marks are permanent",
+    "edge_examinations": "exactly twice",
+    "dfs_launches": "2",
 }
 
 

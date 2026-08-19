@@ -181,7 +181,51 @@ for s in range(n):          # every vertex gets a chance to start
 
 <h2>Flood fill: the same DFS on the grid</h2>
 
-<p>Now port the template to the implicit graph from L1 — and settle a score from your drill review. On a grid, the traversal's neighbor condition splits into <strong>three separate questions</strong>, in this order:</p>
+<p><strong>The problem first.</strong> Every image editor has a paint-bucket tool: click one pixel, and the editor selects that pixel <em>plus every same-colored pixel you can reach from it</em> without stepping across a different color. That operation is called <strong>flood fill</strong>. Here it is on the L1 grid, clicking the top-left cell:</p>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 340 225" width="340" height="225" role="img" aria-label="A 3 by 4 grid of ones and zeros. The three connected ones at the top left are highlighted as the flood-filled region; the three ones at the bottom right are dashed and labeled same value, no path.">
+    <!-- row 0: 1 1 0 0 -->
+    <rect x="20"  y="35" width="50" height="50" fill="#e6f4f1" stroke="#b02a37" stroke-width="3"/>
+    <rect x="70"  y="35" width="50" height="50" fill="#e6f4f1" stroke="#b02a37" stroke-width="3"/>
+    <rect x="120" y="35" width="50" height="50" fill="#fdfdfa" stroke="#bbb" stroke-width="1"/>
+    <rect x="170" y="35" width="50" height="50" fill="#fdfdfa" stroke="#bbb" stroke-width="1"/>
+    <!-- row 1: 1 0 0 1 -->
+    <rect x="20"  y="85" width="50" height="50" fill="#e6f4f1" stroke="#b02a37" stroke-width="3"/>
+    <rect x="70"  y="85" width="50" height="50" fill="#fdfdfa" stroke="#bbb" stroke-width="1"/>
+    <rect x="120" y="85" width="50" height="50" fill="#fdfdfa" stroke="#bbb" stroke-width="1"/>
+    <rect x="170" y="85" width="50" height="50" fill="#fdfdfa" stroke="#0f766e" stroke-width="2" stroke-dasharray="4 3"/>
+    <!-- row 2: 0 0 1 1 -->
+    <rect x="20"  y="135" width="50" height="50" fill="#fdfdfa" stroke="#bbb" stroke-width="1"/>
+    <rect x="70"  y="135" width="50" height="50" fill="#fdfdfa" stroke="#bbb" stroke-width="1"/>
+    <rect x="120" y="135" width="50" height="50" fill="#fdfdfa" stroke="#0f766e" stroke-width="2" stroke-dasharray="4 3"/>
+    <rect x="170" y="135" width="50" height="50" fill="#fdfdfa" stroke="#0f766e" stroke-width="2" stroke-dasharray="4 3"/>
+    <!-- values -->
+    <text x="45"  y="66" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#1a1a1a">1</text>
+    <text x="95"  y="66" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#1a1a1a">1</text>
+    <text x="145" y="66" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" fill="#888">0</text>
+    <text x="195" y="66" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" fill="#888">0</text>
+    <text x="45"  y="116" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#1a1a1a">1</text>
+    <text x="95"  y="116" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" fill="#888">0</text>
+    <text x="145" y="116" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" fill="#888">0</text>
+    <text x="195" y="116" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#1a1a1a">1</text>
+    <text x="45"  y="166" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" fill="#888">0</text>
+    <text x="95"  y="166" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" fill="#888">0</text>
+    <text x="145" y="166" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#1a1a1a">1</text>
+    <text x="195" y="166" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#1a1a1a">1</text>
+    <!-- annotations -->
+    <text x="45" y="22" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#b02a37">click (0, 0)</text>
+    <line x1="45" y1="26" x2="45" y2="34" stroke="#b02a37" stroke-width="2"/>
+    <text x="240" y="150" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#0f766e">same value,</text>
+    <text x="240" y="164" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#0f766e">no path —</text>
+    <text x="240" y="178" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#0f766e">not painted</text>
+    <text x="130" y="212" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#555">flood(0, 0) must paint exactly the three red-bordered cells</text>
+  </svg>
+</figure>
+
+<p>Note what the dashed cells say: the bottom-right <code>"1"</code>s do <em>not</em> get painted. Same value is not enough — the region is defined by <em>reachability through same-value cells</em>, and no such chain crosses the <code>"0"</code>s. Which means the grid has two separate <code>"1"</code>-regions… and counting those regions is literally P1, <em>Number of Islands</em>: the components loop from the previous section, with <code>flood</code> as its <code>dfs</code>. This section is you building that engine.</p>
+
+<p>So port the template. Per L1, the grid is an implicit graph: vertex = cell <code>(r, c)</code>, neighbors = the four offsets, no adjacency list anywhere. One thing genuinely changes. In the list DFS above, the recursion guard was a single check — <code>if v not in visited</code> — but only because the other checks were happening <em>for free elsewhere</em>: <code>adj[u]</code> only ever hands you vertices that exist, and the message problem let you walk every edge. The grid grants neither favor. The offsets manufacture <em>candidate</em> coordinates that may fall off the board, and the paint bucket forbids stepping onto a different value. So the one-line guard unfolds into <strong>three separate questions, in this order</strong>:</p>
 
 <pre><code>R, C = len(grid), len(grid[0])
 visited: set[tuple[int, int]] = set()
@@ -195,7 +239,28 @@ def flood(r: int, c: int) -> None:
                 and grid[nr][nc] == grid[r][c]): # 3. am I ALLOWED to step there? (the problem's rule)
             flood(nr, nc)</code></pre>
 
-<p>Question 3 is where the cell's value finally gets used — as the <em>label of a vertex</em>, deciding where this particular problem lets the traversal walk ("stay on cells of the same value"). It is not an edge flag, and it is not part of anatomy: change the problem and question 3 changes with it, while questions 1 and 2 never move. One launch of <code>flood</code> paints one same-label region — this operation is called <strong>flood fill</strong>, the paint-bucket tool of every image editor, and it is the engine of your next two roadmap problems.</p>
+<p>Everything else is the DFS you just traced: mark on entry, visited never shrinks, one launch paints one region — the vertices are just tuples now. Trace <code>flood(0, 0)</code> on the grid above, offsets in code order (up, down, left, right), and name the question that kills each rejected neighbor:</p>
+
+<table>
+  <tr><th>#</th><th>call</th><th><code>visited</code> after mark</th><th>the four candidates, in order</th></tr>
+  <tr><td>1</td><td><code>flood(0, 0)</code></td><td><code>{(0,0)}</code></td><td>up (−1,0): fails <strong>1</strong> · down (1,0): passes all three → recurse (left/right resume in row 3)</td></tr>
+  <tr><td>2</td><td><code>flood(1, 0)</code></td><td><code>{(0,0), (1,0)}</code></td><td>up (0,0): fails <strong>2</strong> · down (2,0)=<code>"0"</code>: fails <strong>3</strong> · left (1,−1): fails <strong>1</strong> · right (1,1)=<code>"0"</code>: fails <strong>3</strong> → return</td></tr>
+  <tr><td>3</td><td>—</td><td><code>{(0,0), (1,0)}</code></td><td>back in row 1: left (0,−1): fails <strong>1</strong> · right (0,1): passes → recurse</td></tr>
+  <tr><td>4</td><td><code>flood(0, 1)</code></td><td><code>{(0,0), (1,0), (0,1)}</code></td><td>up (−1,1): fails <strong>1</strong> · down (1,1)=<code>"0"</code>: fails <strong>3</strong> · left (0,0): fails <strong>2</strong> · right (0,2)=<code>"0"</code>: fails <strong>3</strong> → return; done</td></tr>
+</table>
+
+<p>Three calls, three cells — exactly the red-bordered region, and every rejected candidate was named by the question that rejected it. Question <strong>1</strong> is L1's bounds check (the negative-index trap lives here). Question <strong>2</strong> is this lesson's visited set, unchanged. Question <strong>3</strong> is the only new thing on the board.</p>
+
+<p>And question 3 settles the score from your drill 0004 review. There, you filtered <code>grid_neighbors</code> by cell value — treating the grid like an adjacency matrix, cell value as an <em>edge flag</em>. Look at where the value actually gets read: <code>grid[nr][nc] == grid[r][c]</code> compares the <em>labels of two vertices</em> and asks "may I stand there?" — it never asks "does an edge exist?". Edges on a grid are implicit and unconditional: every in-bounds side-by-side pair has one (that's why questions 1 and 2 never mention values). What varies per problem is only whether the traversal is <em>allowed to use</em> an edge: swap the rule to <code>grid[nr][nc] == "floor"</code> or <code>grid[nr][nc] &lt;= grid[r][c] + 1</code> and questions 1 and 2 don't move a character.</p>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">After <code>flood(0, 0)</code> paints {(0,0), (0,1), (1,0)}, cell (2, 2) still holds <code>"1"</code> — the same value as the painted cells. Why wasn't it painted?</p>
+  <button class="quiz-opt">its value fails question 3 against grid[0][0]</button>
+  <button class="quiz-opt">it was already in visited from an earlier launch</button>
+  <button class="quiz-opt">no chain of same-value steps connects it to (0, 0)</button>
+  <button class="quiz-opt">(2, 2) fails the bounds check of question 1</button>
+  <p class="quiz-explain">Questions 1–3 are only ever asked about neighbors of cells the flood actually reaches — and the flood never gets anywhere near (2, 2), because every route crosses a <code>"0"</code>. Same value, different region. Run the components loop over the grid and each <code>"1"</code>-region gets its own launch: that count is Number of Islands.</p>
+</div>
 
 <div class="callout key">
   <span class="callout-title">Same skeleton, three graphs</span>
