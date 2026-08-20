@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference — Copying a Graph</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1>Copying a Graph — cheat sheet</h1>
+<p class="lesson-meta">Graphs track · reference · source lesson: <a href="../lessons/0007-graph-copies-and-identity.html">L3</a></p>
+
+<h2>Vocabulary</h2>
+
+<table>
+  <tr><th>Term</th><th>Meaning</th></tr>
+  <tr><td><strong>reference</strong></td><td>what a variable/list slot/dict value holds: an arrow to an object, not the object</td></tr>
+  <tr><td><strong>aliasing</strong></td><td>two names, one object — mutate through either, both "see" it</td></tr>
+  <tr><td><strong>identity vs equality</strong></td><td><code>is</code> = same object; <code>==</code> = same contents. Copies must pass <code>==</code> and fail <code>is</code></td></tr>
+  <tr><td><strong>shallow copy</strong></td><td>new outer object, same inner references (<code>d.copy()</code>, <code>lst[:]</code>)</td></tr>
+  <tr><td><strong>deep copy</strong></td><td>new objects all the way down (<code>copy.deepcopy</code>, or the template below)</td></tr>
+</table>
+
+<h2>The template (old → new map)</h2>
+
+<pre><code>old_to_new: dict[Node, Node] = {}
+
+def clone(u: Node) -> Node:
+    if u in old_to_new:              # keys = the visited set...
+        return old_to_new[u]         # ...values = the answer a set can't give
+    copy = Node(u.val)
+    old_to_new[u] = copy             # register BEFORE wiring — mark on entry
+    for v in u.neighbors:
+        copy.neighbors.append(clone(v))
+    return copy</code></pre>
+
+<h2>Rules that break if forgotten</h2>
+
+<ul>
+  <li><strong>Register before wiring.</strong> Map entry goes in the moment the clone exists, before the neighbor loop — else the cycle recurses forever (L2's mark-on-entry rule).</li>
+  <li><strong>Never skip a seen neighbor.</strong> A traversal skips; a copy must still <em>wire the edge</em> — that's why the guard lives inside <code>clone</code> and returns the stored clone.</li>
+  <li><strong>A visited set is not enough.</strong> It answers "seen?" but not "where is the clone?" — that retrieval is why the set upgrades to a dict.</li>
+</ul>
+
+<h2>Verifying a copy</h2>
+
+<pre><code>copy1 = clone(n1)
+assert copy1 is not n1                 # new object, not an alias
+assert copy1.val == n1.val             # same label
+assert copy1.neighbors[0] is not n2    # edges lead to clones, never originals</code></pre>
+
+<h2>Cost</h2>
+
+<p>Time <strong>O(V + E)</strong>: V node creations; 1 + 2E <code>clone()</code> calls (each undirected edge listed twice). Space <strong>O(V)</strong>: the map + clones, plus O(V) worst-case recursion stack.</p>
+
+<h2>Stdlib equivalent</h2>
+
+<p><code>copy.deepcopy(obj)</code> handles cycles by "keeping a <code>memo</code> dictionary of objects already copied during the current copying pass" (<a href="https://docs.python.org/3/library/copy.html">docs</a>) — the memo dict <em>is</em> <code>old_to_new</code>. Use it in production; build it by hand on LC 133.</p>
+
+</body>
+</html>

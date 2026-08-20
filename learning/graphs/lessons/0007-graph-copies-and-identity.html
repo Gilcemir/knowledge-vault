@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L3 — Copying a Graph: Identity and the old→new Map</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>L3 — Copying a Graph: Identity and the old→new Map</h1>
+<p class="lesson-meta">Graphs track · lesson 3 of the main line · ~25 min · 2026-08-20 · prereq: <a href="./0005-dfs-with-cycles.html">L2 — DFS with Cycles</a></p>
+
+<h2>The problem first — hand over the network without handing over yours</h2>
+
+<p>Yesterday's P2 review ended on an open wound: your <code>maxAreaOfIsland</code> zeroed cells in place, and we saw that this <strong>destroys the caller's grid</strong> — whoever gave you that grid gets it back ruined. The production fix we named was: work on a copy. For a grid that's two lines:</p>
+
+<pre><code>grid_copy = [row[:] for row in grid]   # row[:] returns a NEW list holding the same elements</code></pre>
+
+<p>Now the same request lands on the friendship network from L1. A teammate's function runs a destructive analysis — it deletes edges as it works, exactly like your dfs zeroed cells. You must hand it the network <em>without</em> losing yours. So: copy the graph. How hard can it be?</p>
+
+<p>Hard enough to be a roadmap problem. By the end of this lesson you'll know the one template that solves it — and that template is <strong>P3, Clone Graph (LC 133)</strong>, waiting for you at the end.</p>
+
+<h2>What a variable actually holds</h2>
+
+<p>First, the mechanism behind the P2 wound. Why did the <em>caller's</em> grid change, when the caller never ran your code on their own variable? Because a Python variable does not hold a value — it holds an arrow. Three new nouns, all visible in one picture:</p>
+
+<pre><code>a = [1, 2]
+b = a          # copies the ARROW, not the list
+c = [1, 2]     # builds a SECOND list that happens to look the same</code></pre>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 480 170" width="480" height="170" role="img" aria-label="Memory diagram: variables a and b both point at one list object; variable c points at a second, separate list object with equal contents">
+    <rect x="25" y="22" width="34" height="26" rx="5" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <rect x="25" y="62" width="34" height="26" rx="5" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <rect x="25" y="122" width="34" height="26" rx="5" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <text x="42" y="40" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">a</text>
+    <text x="42" y="80" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">b</text>
+    <text x="42" y="140" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">c</text>
+    <rect x="170" y="35" width="140" height="40" rx="8" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+    <rect x="170" y="115" width="140" height="40" rx="8" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+    <text x="240" y="60" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" fill="#1a1a1a">list object ① · [1, 2]</text>
+    <text x="240" y="140" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" fill="#1a1a1a">list object ② · [1, 2]</text>
+    <line x1="59" y1="35" x2="168" y2="50" stroke="#555" stroke-width="2" marker-end="url(#arrow3)"/>
+    <line x1="59" y1="75" x2="168" y2="60" stroke="#555" stroke-width="2" marker-end="url(#arrow3)"/>
+    <line x1="59" y1="135" x2="168" y2="135" stroke="#555" stroke-width="2" marker-end="url(#arrow3)"/>
+    <defs>
+      <marker id="arrow3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+        <path d="M0,0 L8,4 L0,8 z" fill="#555"/>
+      </marker>
+    </defs>
+    <text x="340" y="50" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">a is b → True</text>
+    <text x="340" y="95" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">a == c → True</text>
+    <text x="340" y="140" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">a is c → False</text>
+  </svg>
+</figure>
+
+<table>
+  <tr><th>Term</th><th>In the picture</th></tr>
+  <tr><td><strong>reference</strong></td><td>the arrow. Every variable, list slot, and dict value is one. The list object lives elsewhere; the name just points at it.</td></tr>
+  <tr><td><strong>aliasing</strong></td><td><code>a</code> and <code>b</code> are two names, one object. Mutate through either name and the other "sees" it — there is no other, there's one list. This is exactly how your dfs reached the caller's grid.</td></tr>
+  <tr><td><strong>identity</strong></td><td>which object an arrow lands on. <code>is</code> compares identity (same object?); <code>==</code> compares contents (same value?). ① and ② are equal but not identical.</td></tr>
+</table>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">After <code>a = [1, 2]</code>, then <code>b = a</code>, then <code>b.append(3)</code> — what does <code>a</code> hold?</p>
+  <button class="quiz-opt">[1, 2] — the append only changed b</button>
+  <button class="quiz-opt">[1, 2, 3] — a and b name one list</button>
+  <button class="quiz-opt">[1, 2] — b became a fresh list first</button>
+  <button class="quiz-opt">[1, 3] — append overwrote the second element</button>
+  <p class="quiz-explain"><code>b = a</code> copied the arrow. There is exactly one list object in that program, with two names on it. Appending through <code>b</code> and reading through <code>a</code> touch the same memory.</p>
+</div>
+
+<h2>Shallow copy — one level deep is not deep</h2>
+
+<p>So copying means: build a <em>new object</em>. Python dicts ship a method for that — contract first: <code>d.copy()</code> takes no arguments, returns a <strong>new dict</strong> with the same keys and values, and leaves <code>d</code> untouched. Sounds like the fix. Try it on L1's adjacency dict:</p>
+
+<pre><code>adj = {0: [1], 1: [0]}
+new = adj.copy()      # new dict — adj is not new is True
+new[0].append(9)      # mutate through the copy...
+print(adj[0])         # [1, 9]  ← ...and the ORIGINAL changed</code></pre>
+
+<p>The outer dict is new, but its <em>values are references</em> — the same arrows, landing on the same inner lists. The Python docs give this failure a name, defined precisely (<a href="https://docs.python.org/3/library/copy.html">docs.python.org — <code>copy</code></a>):</p>
+
+<table>
+  <tr><th>Term</th><th>Docs definition (verbatim)</th></tr>
+  <tr><td><strong>shallow copy</strong></td><td>"constructs a new compound object and then (to the extent possible) inserts <em>references</em> into it to the objects found in the original."</td></tr>
+  <tr><td><strong>deep copy</strong></td><td>"constructs a new compound object and then, recursively, inserts <em>copies</em> into it of the objects found in the original."</td></tr>
+</table>
+
+<p>Your grid fix <code>[row[:] for row in grid]</code> was a hand-rolled deep copy: new outer list, and a new inner list per row. It worked because a grid is exactly two levels deep and the innermost values (<code>"0"</code>/<code>"1"</code> strings) are immutable — nothing deeper to chase.</p>
+
+<div class="quiz" data-answer="3">
+  <p class="quiz-q">Given <code>adj = {0: [1], 1: [0]}</code> and <code>new = adj.copy()</code>, after <code>new[0].append(9)</code> — what is <code>adj[0]</code>?</p>
+  <button class="quiz-opt">[1] — copy() rebuilt every inner list too</button>
+  <button class="quiz-opt">[1] — new[0] was rebound to another list</button>
+  <button class="quiz-opt">[9] — the append replaced the list's contents</button>
+  <button class="quiz-opt">[1, 9] — both dicts share one inner list</button>
+  <p class="quiz-explain">Shallow means the copy stops at level one: new dict, same arrows inside it. <code>new[0]</code> and <code>adj[0]</code> are aliases of a single list — the picture from the previous section, wearing a dict.</p>
+</div>
+
+<h2>A graph made of objects</h2>
+
+<p>One more twist before the real problem. So far every graph you've touched was an adjacency <em>dict</em> that you held whole in one variable. LC 133 hands you the graph in a different costume — each vertex is an <strong>object</strong>, and edges are references stored inside it:</p>
+
+<pre><code>class Node:
+    def __init__(self, val: int = 0, neighbors: list["Node"] | None = None) -> None:
+        self.val = val
+        self.neighbors: list[Node] = neighbors if neighbors is not None else []</code></pre>
+
+<p>Build the triangle from L2 in this costume:</p>
+
+<pre><code>n1, n2, n3 = Node(1), Node(2), Node(3)
+n1.neighbors = [n2, n3]
+n2.neighbors = [n1, n3]
+n3.neighbors = [n1, n2]</code></pre>
+
+<p>Map the new representation onto the one you already own — same graph, different clothes:</p>
+
+<table>
+  <tr><th>Adjacency dict (L1)</th><th>Node objects (this lesson)</th></tr>
+  <tr><td>a vertex is a <em>key</em>: <code>0</code>, <code>1</code>, <code>2</code></td><td>a vertex is the <em>object itself</em>: <code>n1</code></td></tr>
+  <tr><td>its label is the key value</td><td>its label lives in <code>u.val</code></td></tr>
+  <tr><td>its neighbors: <code>adj[u]</code>, a list of keys</td><td>its neighbors: <code>u.neighbors</code>, a list of references</td></tr>
+  <tr><td>you hold the whole graph in one dict</td><td>you hold <em>one node</em>; edges lead to all the rest</td></tr>
+</table>
+
+<p>That last row matters: LC 133 gives you a single reference to one node. Everything else is reachable only by walking edges — which is why cloning is a <em>traversal</em> problem, not a loop-over-keys problem.</p>
+
+<h2>Clone it — the L2 crash returns</h2>
+
+<p>You know a traversal. Port it naively: to clone a node, make a fresh <code>Node</code> with the same label, then clone each neighbor:</p>
+
+<pre><code>def clone(u: Node) -> Node:
+    copy = Node(u.val)
+    for v in u.neighbors:
+        copy.neighbors.append(clone(v))
+    return copy</code></pre>
+
+<p>Trace on the triangle, one row per call — you already know the shape of what's coming:</p>
+
+<table>
+  <tr><th>#</th><th>call</th><th>what it does</th></tr>
+  <tr><td>1</td><td><code>clone(n1)</code></td><td>builds a fresh clone of 1; first neighbor n2 → recurse</td></tr>
+  <tr><td>2</td><td><code>clone(n2)</code></td><td>builds a fresh clone of 2; first neighbor n1 → recurse</td></tr>
+  <tr><td>3</td><td><code>clone(n1)</code></td><td>builds a <strong>second</strong> clone of 1; first neighbor n2 → recurse</td></tr>
+  <tr><td>⋮</td><td>⋮</td><td>…≈1000 frames later: <code>RecursionError</code></td></tr>
+</table>
+
+<p>Same disease as L2's naive DFS — the cycle re-enters vertices forever. But look at row 3: this version was also <strong>mass-producing duplicate clones</strong> on the way down. Two failures, and they demand the same cure they demanded in L2: never re-enter a vertex.</p>
+
+<h2>Why a visited set is not enough</h2>
+
+<p>So reach for L2's cure — a visited set — and watch it come up short:</p>
+
+<pre><code>visited: set[Node] = set()
+
+def clone(u: Node) -> Node:
+    visited.add(u)
+    copy = Node(u.val)
+    for v in u.neighbors:
+        if v not in visited:
+            copy.neighbors.append(clone(v))
+        else:
+            copy.neighbors.append(???)   # v was cloned earlier... but WHERE is that clone?
+    return copy</code></pre>
+
+<p>The recursion is tamed, but stand inside that <code>else</code> branch at n2, looking at already-visited n1. The copy of the triangle needs the edge 2–1 to exist, so <em>something</em> must be appended. The set can answer "have I seen n1?" — it cannot answer "and where did I put n1's clone?". You did the work; you just can't find it again.</p>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">In that <code>else</code> branch at n2, with n1 already visited — what does <code>c2</code>, the half-built clone of n2, need right now?</p>
+  <button class="quiz-opt">the existing clone of n1, appended to c2.neighbors</button>
+  <button class="quiz-opt">a skip — visited vertices need no more work</button>
+  <button class="quiz-opt">the original n1 itself, appended to c2.neighbors</button>
+  <button class="quiz-opt">a second clone of n1, built right here now</button>
+  <p class="quiz-explain">Skipping drops the edge 2–1 from the copy (in L2, skipping was fine — a traversal only had to <em>reach</em> things; a copy has to <em>rebuild</em> things). Appending the original leaks your graph into the "copy" — aliasing again. A second clone forks vertex 1 in two. Only the existing clone preserves the shape — and a set can't hand it back.</p>
+</div>
+
+<h2>The fix — upgrade the set to a map: old → new</h2>
+
+<p>The visited set needs to remember one more thing: for each original, <em>where its clone lives</em>. A set that stores an answer is a dict. This is the whole lesson:</p>
+
+<pre><code>old_to_new: dict[Node, Node] = {}
+
+def clone(u: Node) -> Node:
+    if u in old_to_new:              # "visited" check — the keys ARE the visited set
+        return old_to_new[u]         # ...and now it can HAND BACK the clone
+    copy = Node(u.val)
+    old_to_new[u] = copy             # register BEFORE wiring neighbors — L2's mark-on-entry
+    for v in u.neighbors:
+        copy.neighbors.append(clone(v))
+    return copy</code></pre>
+
+<p>Two deliberate differences from L2's dfs template — map them before they bite you:</p>
+
+<table>
+  <tr><th></th><th>L2 <code>dfs(u)</code></th><th><code>clone(u)</code></th></tr>
+  <tr><td>guard lives</td><td>at the <em>call site</em>: <code>if v not in visited: dfs(v)</code></td><td><em>inside</em>, first line: <code>if u in old_to_new: return …</code></td></tr>
+  <tr><td>returns</td><td>nothing — visiting was the point</td><td>the clone — the caller needs it <strong>every time</strong>, seen or not, so the call can never be skipped</td></tr>
+  <tr><td>mark on entry</td><td><code>visited.add(u)</code> before the loop</td><td><code>old_to_new[u] = copy</code> before the loop</td></tr>
+</table>
+
+<p>(P2 already made you grow the "dfs returns something" muscle — this is that muscle again, returning an object instead of an area.)</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">Register before wiring — L2's rule in new clothes</span>
+  Move <code>old_to_new[u] = copy</code> to <em>after</em> the neighbor loop and the protection evaporates: cloning n1 recurses into n2, which looks up n1 — not registered yet, since n1's loop hasn't finished — and recurses straight back into it. Infinite ping-pong, with the map sitting right there. <strong>The moment the clone exists, it goes in the map — before any neighbor is wired.</strong>
+</div>
+
+<p>One Python footnote so the dict doesn't feel like magic: <code>Node</code> objects work as dict keys because instances of user-defined classes are <a href="https://docs.python.org/3/glossary.html#term-hashable">hashable by default</a> — hashed by <em>identity</em>, each object equal only to itself. Which is precisely what you want: two nodes with the same <code>val</code> are still two different vertices.</p>
+
+<p>Now the paper trace — full state table on the triangle, starting at <code>clone(n1)</code>:</p>
+
+<table>
+  <tr><th>#</th><th>call</th><th><code>old_to_new</code> after register</th><th><code>u.neighbors</code></th><th>decisions</th></tr>
+  <tr><td>1</td><td><code>clone(n1)</code></td><td><code>{n1→c1}</code></td><td><code>[n2, n3]</code></td><td>clone(n2) → not in map → recurse (row 2)</td></tr>
+  <tr><td>2</td><td><code>clone(n2)</code></td><td><code>{n1→c1, n2→c2}</code></td><td><code>[n1, n3]</code></td><td>clone(n1) → map hit, append c1; clone(n3) → recurse (row 3)</td></tr>
+  <tr><td>3</td><td><code>clone(n3)</code></td><td><code>{n1→c1, n2→c2, n3→c3}</code></td><td><code>[n1, n2]</code></td><td>clone(n1) → map hit, append c1; clone(n2) → map hit, append c2; return c3</td></tr>
+  <tr><td>4</td><td>—</td><td>unchanged</td><td>—</td><td>row 2 appends c3, returns c2; row 1 appends c2, then clone(n3) → map hit, appends c3; done</td></tr>
+</table>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 460 185" width="460" height="185" role="img" aria-label="Left: the original triangle of nodes 1,2,3 in teal. Right: the cloned triangle c1,c2,c3 in green. Dashed gray arrows labeled old_to_new connect each original to its clone.">
+    <line x1="90" y1="45" x2="50" y2="125" stroke="#555" stroke-width="2"/>
+    <line x1="90" y1="45" x2="130" y2="125" stroke="#555" stroke-width="2"/>
+    <line x1="50" y1="125" x2="130" y2="125" stroke="#555" stroke-width="2"/>
+    <line x1="360" y1="45" x2="320" y2="125" stroke="#555" stroke-width="2"/>
+    <line x1="360" y1="45" x2="400" y2="125" stroke="#555" stroke-width="2"/>
+    <line x1="320" y1="125" x2="400" y2="125" stroke="#555" stroke-width="2"/>
+    <line x1="108" y1="42" x2="340" y2="42" stroke="#999" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <line x1="148" y1="122" x2="302" y2="122" stroke="#999" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <line x1="148" y1="132" x2="382" y2="132" stroke="#999" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <circle cx="90" cy="45" r="16" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="50" cy="125" r="16" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="130" cy="125" r="16" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="360" cy="45" r="16" fill="#eaf6ec" stroke="#2e7d32" stroke-width="2"/>
+    <circle cx="320" cy="125" r="16" fill="#eaf6ec" stroke="#2e7d32" stroke-width="2"/>
+    <circle cx="400" cy="125" r="16" fill="#eaf6ec" stroke="#2e7d32" stroke-width="2"/>
+    <text x="90" y="50" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#1a1a1a">n1</text>
+    <text x="50" y="130" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#1a1a1a">n2</text>
+    <text x="130" y="130" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#1a1a1a">n3</text>
+    <text x="360" y="50" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#1a1a1a">c1</text>
+    <text x="320" y="130" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#1a1a1a">c2</text>
+    <text x="400" y="130" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#1a1a1a">c3</text>
+    <text x="228" y="34" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#999">old_to_new</text>
+    <text x="90" y="80" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#0f766e">originals</text>
+    <text x="360" y="80" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#2e7d32">clones</text>
+  </svg>
+</figure>
+
+<p>Two triangles, zero shared vertices. And <code>is</code> — not <code>==</code> — is the tool that proves it:</p>
+
+<pre><code>copy1 = clone(n1)
+assert copy1 is not n1                 # a new object, not an alias
+assert copy1.val == n1.val             # same label
+assert copy1.neighbors[0] is not n2    # edges lead to clones, never to originals</code></pre>
+
+<p>A "copy" that leaks one original into its neighbor lists passes every <code>==</code> test you can write and fails the third assert instantly. Identity checks are how graph copies are judged — LC 133's judge does exactly this.</p>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q"><code>clone(n1)</code> on the triangle, template above: how many <code>clone()</code> calls happen in total, and how many of them build a new <code>Node</code>?</p>
+  <button class="quiz-opt">3 calls in total — and 3 build one</button>
+  <button class="quiz-opt">6 calls in total — and 3 build one</button>
+  <button class="quiz-opt">7 calls in total — and 3 build one</button>
+  <button class="quiz-opt">7 calls in total — and 7 build one</button>
+  <p class="quiz-explain">Count by structure, not by guess: one top-level call, plus one call per neighbor-list entry — the triangle's lists hold 2 + 2 + 2 = 6 entries — so 1 + 6 = 7. The map answers 4 of them instantly; exactly V = 3 reach the build line, one per vertex.</p>
+</div>
+
+<p>That count is the cost argument, done:</p>
+
+<table>
+  <tr><th>phase</th><th>cost</th></tr>
+  <tr><td>Node creations</td><td>V — each original enters the map exactly once</td></tr>
+  <tr><td><code>clone()</code> calls</td><td>1 + one per neighbor entry = 1 + 2E (undirected: each edge listed twice)</td></tr>
+  <tr><td><strong>time</strong></td><td><strong>O(V + E)</strong> — same bound as L2's traversal, for the same reason</td></tr>
+  <tr><td><strong>space</strong></td><td><strong>O(V)</strong> for the map and the clones, plus O(V) worst-case recursion stack</td></tr>
+</table>
+
+<h2>The stdlib already ships this</h2>
+
+<p>Contract first: <code>copy.deepcopy(obj)</code> takes any object, returns a new object rebuilt recursively, and leaves the original untouched. How does it survive an object that contains a cycle — like every undirected graph? The <a href="https://docs.python.org/3/library/copy.html">docs</a> answer verbatim: it works by "keeping a <code>memo</code> dictionary of objects already copied during the current copying pass."</p>
+
+<p>Read that again. The <code>memo</code> dictionary <em>is</em> <code>old_to_new</code>. You just re-derived the engine inside <code>copy.deepcopy</code> — the same way the heap track ended with you re-deriving <code>heapq</code>. In production, reach for <code>deepcopy</code>. On LC 133, the point is to build the engine yourself.</p>
+
+<h2>Your problem</h2>
+
+<div class="callout try-it">
+  <span class="callout-title">P3 — Clone Graph (LC 133), solo</span>
+  <ol>
+    <li><strong>Close this lesson.</strong> Retrieval builds storage; rereading builds comfort.</li>
+    <li>Open <a href="https://leetcode.com/problems/clone-graph/">LC 133 — Clone Graph</a>. The graph arrives exactly as this lesson's <code>Node</code>; read the constraints carefully — including what the input may be when the graph is empty.</li>
+    <li>Solve on the platform. Hints from your teacher on request, escalating as usual — never the solution.</li>
+    <li>At hand-in: bring the code <em>and</em> the per-phase cost table, <strong>space row included</strong>.</li>
+  </ol>
+</div>
+
+<h2>Primary source</h2>
+
+<p>Python official docs, <a href="https://docs.python.org/3/library/copy.html">the <code>copy</code> module</a> — ten minutes, and every noun this lesson defined (shallow, deep, memo) is there with full precision. Backup: the glossary entry for <a href="https://docs.python.org/3/glossary.html#term-hashable">hashable</a>, for why objects can key a dict.</p>
+
+<p>Quick-reference version of this lesson: <a href="../reference/copy-a-graph.html">Copying a graph cheat sheet</a> · from L2: <a href="../reference/dfs-traversal.html">DFS traversal</a> · from L1: <a href="../reference/graph-representations.html">Graph representations</a>.</p>
+
+<p><em>Anything unclear? Ask your teacher — quote the exact sentence or trace row that lost you.</em></p>
+
+</body>
+</html>
