@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L4 — BFS: Layers Are Distances</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>L4 — BFS: Layers Are Distances</h1>
+<p class="lesson-meta">Graphs track · lesson 4 of the main line · ~25 min · 2026-08-25 · prereq: <a href="./0005-dfs-with-cycles.html">L2 — DFS with Cycles</a>, <a href="./0007-graph-copies-and-identity.html">L3 — Copying a Graph</a></p>
+
+<h2>The problem first — "how many days", not "can it reach"</h2>
+
+<p>A rumor starts at person 0 in a friendship network. Every day, everyone who knows it tells all their friends. The question is not <em>whether</em> person 3 will hear it — your L2 DFS answers that. The question is: <strong>on which day?</strong></p>
+
+<p>Take the square network below: edges 0–1, 1–2, 2–3, 3–0. Run your L2 DFS from 0 and watch the order it reaches 3:</p>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 460 190" width="460" height="190" role="img" aria-label="Square graph with vertices 0,1,2,3. A red dashed path shows DFS walking 0 to 1 to 2 to 3, three hops. A green edge shows the direct edge 0 to 3, one hop.">
+    <defs>
+      <marker id="arrR" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+        <path d="M0,0 L8,4 L0,8 z" fill="#b02a37"/>
+      </marker>
+    </defs>
+    <line x1="145" y1="45" x2="285" y2="45" stroke="#ddd" stroke-width="3"/>
+    <line x1="285" y1="45" x2="285" y2="145" stroke="#ddd" stroke-width="3"/>
+    <line x1="285" y1="145" x2="145" y2="145" stroke="#ddd" stroke-width="3"/>
+    <line x1="145" y1="45" x2="145" y2="145" stroke="#1e7e34" stroke-width="4"/>
+    <path d="M150 38 L 278 38" stroke="#b02a37" stroke-width="2" stroke-dasharray="5,4" fill="none" marker-end="url(#arrR)"/>
+    <path d="M292 50 L 292 138" stroke="#b02a37" stroke-width="2" stroke-dasharray="5,4" fill="none" marker-end="url(#arrR)"/>
+    <path d="M278 152 L 152 152" stroke="#b02a37" stroke-width="2" stroke-dasharray="5,4" fill="none" marker-end="url(#arrR)"/>
+    <circle cx="145" cy="45" r="17" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="285" cy="45" r="17" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="285" cy="145" r="17" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="145" cy="145" r="17" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+    <text x="145" y="50" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">0</text>
+    <text x="285" y="50" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">1</text>
+    <text x="285" y="150" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">2</text>
+    <text x="145" y="150" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">3</text>
+    <text x="330" y="60" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#b02a37">DFS route: 3 hops</text>
+    <text x="30" y="100" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#1e7e34">truth: 1 hop</text>
+  </svg>
+</figure>
+
+<p>DFS dives: 0 → 1 → 2 → 3. It <em>reaches</em> 3 at depth 3 — but 3 is a direct friend of 0 and hears the rumor on <strong>day 1</strong>. Recursion depth is the length of <em>the path DFS happened to walk</em>, not the shortest one. DFS answers reachability; it is structurally incapable of answering distance.</p>
+
+<p>The traversal that answers "which day" is <strong>BFS — breadth-first search</strong>. Same graph, same visited discipline you already own, one swapped part. By the end you'll have the template, the reason layers equal distances, and the multi-source trick — the pieces that P4 (<a href="https://leetcode.com/problems/rotting-oranges/">Rotting Oranges, LC 994</a>) will ask you to assemble.</p>
+
+<h2>The tool: a line you serve from the front</h2>
+
+<p>Three new nouns before any code, all visible in one picture. A <strong>queue</strong> is a waiting line: things join at the back and are served from the front. That discipline has a name — <strong>FIFO</strong>, first in, first out: whoever has waited longest is served next. Joining the line is called <strong>enqueue</strong>; being served (and leaving) is called <strong>dequeue</strong>.</p>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 460 120" width="460" height="120" role="img" aria-label="A queue drawn as three boxes 7, 8, 9 in a row. An arrow enters on the right labeled append, an arrow leaves on the left labeled popleft.">
+    <defs>
+      <marker id="arrQ" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+        <path d="M0,0 L8,4 L0,8 z" fill="#555"/>
+      </marker>
+    </defs>
+    <rect x="165" y="35" width="42" height="42" rx="6" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <rect x="211" y="35" width="42" height="42" rx="6" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <rect x="257" y="35" width="42" height="42" rx="6" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <text x="186" y="61" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#1a1a1a">7</text>
+    <text x="232" y="61" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#1a1a1a">8</text>
+    <text x="278" y="61" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#1a1a1a">9</text>
+    <line x1="380" y1="56" x2="308" y2="56" stroke="#555" stroke-width="2" marker-end="url(#arrQ)"/>
+    <line x1="158" y1="56" x2="86" y2="56" stroke="#555" stroke-width="2" marker-end="url(#arrQ)"/>
+    <text x="382" y="45" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">append(x)</text>
+    <text x="382" y="72" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">joins the back</text>
+    <text x="18" y="45" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">popleft()</text>
+    <text x="18" y="72" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">served first</text>
+    <text x="186" y="100" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#555">front (oldest)</text>
+    <text x="278" y="100" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#555">back (newest)</text>
+  </svg>
+</figure>
+
+<table>
+  <tr><th>Term</th><th>In the picture</th></tr>
+  <tr><td><strong>queue</strong></td><td>the row of boxes — a waiting line of pending vertices</td></tr>
+  <tr><td><strong>FIFO</strong></td><td>7 arrived before 9, so 7 leaves before 9 — first in, first out</td></tr>
+  <tr><td><strong>enqueue</strong> / <code>append</code></td><td>the right arrow: a new item joins at the back</td></tr>
+  <tr><td><strong>dequeue</strong> / <code>popleft</code></td><td>the left arrow: the oldest item is served from the front</td></tr>
+</table>
+
+<p>Contrast with what recursion gave you for free in DFS: the call stack is <strong>LIFO</strong> — last in, first out — the <em>newest</em> pending thing is handled first, which is exactly why DFS dives. Swap LIFO for FIFO and the traversal stops diving and starts <em>rippling</em>.</p>
+
+<h2>The stdlib queue: <code>collections.deque</code></h2>
+
+<p>Python ships the queue. Its contract, before we reason with it (the docs call it a <a href="https://docs.python.org/3/library/collections.html#collections.deque">"double-ended queue", pronounced "deck"</a>):</p>
+
+<table>
+  <tr><th>Operation</th><th>Input → output</th><th>Mutates?</th><th>Cost</th></tr>
+  <tr><td><code>deque(iterable)</code></td><td>builds a deque holding the items, left to right</td><td>builds new</td><td>O(len)</td></tr>
+  <tr><td><code>q.append(x)</code></td><td>docs: <em>"Add item to the right side of the deque."</em> Returns <code>None</code></td><td>yes</td><td>O(1)</td></tr>
+  <tr><td><code>q.popleft()</code></td><td>docs: <em>"Remove and return an element from the left side of the deque. If no elements are present, raises an IndexError."</em></td><td>yes</td><td>O(1)</td></tr>
+  <tr><td><code>len(q)</code>, <code>while q:</code></td><td>item count; a deque is falsy when empty</td><td>no</td><td>O(1)</td></tr>
+</table>
+
+<p>Why not just use a list, appending to the back and popping index 0? The docs answer directly: deques support <em>"appends and pops from either side of the deque with approximately the same O(1) performance"</em>, while lists <em>"incur O(n) memory movement costs for <code>pop(0)</code> and <code>insert(0, v)</code>"</em> — popping the front of a list shifts every remaining element one slot left. Do that V times and your O(V + E) traversal quietly becomes O(V²). (No <code>inspect.getsource</code> moment this time: <code>deque</code> is implemented in C, so there is no Python source to open — the docs are the contract.)</p>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">After <code>q = deque([7])</code>, then <code>q.append(8)</code>, then <code>q.append(9)</code> — what does <code>q.popleft()</code> return, and what remains in <code>q</code>?</p>
+  <button class="quiz-opt">It returns 9 — and the deque still holds [7, 8]</button>
+  <button class="quiz-opt">It returns 7 — and the deque is emptied entirely</button>
+  <button class="quiz-opt">It returns 7 — and the deque still holds [8, 9]</button>
+  <button class="quiz-opt">It returns 8 — and the deque still holds [7, 9]</button>
+  <p class="quiz-explain"><code>append</code> joins at the right (the back of the line), <code>popleft</code> serves from the left (the front). 7 has waited longest, so 7 leaves first — FIFO. Returning 9 would be a stack (LIFO): that's the call-stack discipline DFS runs on.</p>
+</div>
+
+<h2>The template — your L2 DFS with one part swapped</h2>
+
+<p>Set your L2 template side by side with the new one. Per the house rule: every new template gets mapped onto the one you already own.</p>
+
+<pre><code>​# L2 — DFS (yours)                        # L4 — BFS (new)
+def dfs(u: int) -> None:                  from collections import deque
+    seen.add(u)                           def bfs(adj: dict[int, list[int]],
+    for v in adj[u]:                              start: int) -> set[int]:
+        if v not in seen:                     seen: set[int] = {start}
+            dfs(v)                            queue: deque[int] = deque([start])
+                                              while queue:
+                                                  u = queue.popleft()
+                                                  for v in adj[u]:
+                                                      if v not in seen:
+                                                          seen.add(v)
+                                                          queue.append(v)
+                                              return seen</code></pre>
+
+<table>
+  <tr><th></th><th>DFS (L2, yours)</th><th>BFS (new)</th></tr>
+  <tr><td>where pending work waits</td><td>the call stack — implicit, built by recursion</td><td>a <code>deque</code> — explicit, built by you</td></tr>
+  <tr><td>service order</td><td>LIFO: newest first → dives</td><td>FIFO: oldest first → ripples</td></tr>
+  <tr><td>visited discipline</td><td>a <code>seen</code> set, marks are permanent</td><td>identical — same set, same permanence</td></tr>
+  <tr><td>mark moment</td><td>on <em>entering</em> <code>u</code>, before recursing</td><td>on <em>enqueuing</em> <code>v</code>, before it waits</td></tr>
+  <tr><td>what it answers</td><td>reachability, components, flood fill</td><td>all of that, <em>plus distance</em></td></tr>
+  <tr><td>total cost</td><td>O(V + E)</td><td>O(V + E)</td></tr>
+</table>
+
+<div class="callout gotcha">
+  <span class="callout-title">Mark on enqueue, not on dequeue — mark-on-entry in its third outfit</span>
+  <p>The unifying rule since L2: <strong>mark a vertex the moment it is claimed, not the moment it is processed.</strong> In DFS, claiming = entering the call. In BFS, claiming = joining the queue — because between <code>append</code> and <code>popleft</code> a vertex just <em>sits there</em>, and if it isn't marked yet, a second neighbor will discover it and enqueue it again. Trace the triangle 1–2–3 from 1 with the mark moved to the <code>popleft</code> line: pop 1, enqueue 2 and 3 (neither marked). Pop 2, mark it — its neighbor 3 is still unmarked, so 3 is enqueued <em>again</em>. Queue: <code>[3, 3]</code>. On dense graphs the duplicates pile toward one per edge, and the queue you budgeted at V entries swells toward 2E — the same late-mark disease as L2's mark-after-loop and L3's register-after-wiring.</p>
+</div>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">In the BFS template, move <code>seen.add</code> so it marks <code>u</code> right after <code>popleft</code>, instead of marking <code>v</code> at append time. What is the consequence?</p>
+  <button class="quiz-opt">Vertices can sit in the queue two or more times</button>
+  <button class="quiz-opt">Vertices can be skipped over and never get visited</button>
+  <button class="quiz-opt">The next popleft immediately raises an IndexError</button>
+  <button class="quiz-opt">The queue order silently flips from FIFO to LIFO</button>
+  <p class="quiz-explain">Unmarked waiting vertices are invisible to the <code>v not in seen</code> guard, so every extra neighbor that discovers them enqueues another copy. Nothing crashes and nothing is skipped — the traversal still terminates and still reaches everything. It just does redundant work: the queue swells toward 2E instead of staying ≤ V.</p>
+</div>
+
+<h2>Why layers ARE distances</h2>
+
+<p>Here is the claim that makes BFS the shortest-path tool: <strong>the queue serves vertices in order of their distance from the start.</strong> Everything at distance d is served before anything at distance d + 1. The set of vertices at distance d is called <strong>layer d</strong> (MIT's 6.006 calls them <em>levels</em>); the layer currently being served is the <strong>frontier</strong> — the rumor's wavefront, the people hearing it <em>today</em>.</p>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 460 200" width="460" height="200" role="img" aria-label="Graph with vertices arranged in columns by BFS layer. Layer 0 holds vertex 0, layer 1 holds vertices 1 and 2, layer 2 holds vertex 3, layer 3 holds vertex 4. Edges connect 0-1, 0-2, 1-3, 2-3, 3-4.">
+    <rect x="30" y="30" width="64" height="140" rx="10" fill="#e6f4f1" stroke="none"/>
+    <rect x="130" y="30" width="64" height="140" rx="10" fill="#d3ece7" stroke="none"/>
+    <rect x="230" y="30" width="64" height="140" rx="10" fill="#bfe3dc" stroke="none"/>
+    <rect x="330" y="30" width="64" height="140" rx="10" fill="#aad9d0" stroke="none"/>
+    <line x1="62" y1="100" x2="162" y2="60" stroke="#555" stroke-width="2"/>
+    <line x1="62" y1="100" x2="162" y2="140" stroke="#555" stroke-width="2"/>
+    <line x1="162" y1="60" x2="262" y2="100" stroke="#555" stroke-width="2"/>
+    <line x1="162" y1="140" x2="262" y2="100" stroke="#555" stroke-width="2"/>
+    <line x1="262" y1="100" x2="362" y2="100" stroke="#555" stroke-width="2"/>
+    <circle cx="62" cy="100" r="17" fill="#fdfdfa" stroke="#0f766e" stroke-width="2.5"/>
+    <circle cx="162" cy="60" r="17" fill="#fdfdfa" stroke="#0f766e" stroke-width="2.5"/>
+    <circle cx="162" cy="140" r="17" fill="#fdfdfa" stroke="#0f766e" stroke-width="2.5"/>
+    <circle cx="262" cy="100" r="17" fill="#fdfdfa" stroke="#0f766e" stroke-width="2.5"/>
+    <circle cx="362" cy="100" r="17" fill="#fdfdfa" stroke="#0f766e" stroke-width="2.5"/>
+    <text x="62" y="105" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">0</text>
+    <text x="162" y="65" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">1</text>
+    <text x="162" y="145" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">2</text>
+    <text x="262" y="105" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">3</text>
+    <text x="362" y="105" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#1a1a1a">4</text>
+    <text x="62" y="190" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">layer 0</text>
+    <text x="162" y="190" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">layer 1</text>
+    <text x="262" y="190" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">layer 2</text>
+    <text x="362" y="190" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">layer 3</text>
+  </svg>
+</figure>
+
+<p>Paper trace — the graph above is edges 0–1, 0–2, 1–3, 2–3, 3–4, BFS from 0. Do it yourself first, then check:</p>
+
+<table>
+  <tr><th>step</th><th>popleft</th><th>appends</th><th>queue after</th><th>seen after</th></tr>
+  <tr><td>seed</td><td>—</td><td>0</td><td><code>[0]</code></td><td>{0}</td></tr>
+  <tr><td>1</td><td>0</td><td>1, 2</td><td><code>[1, 2]</code></td><td>{0, 1, 2}</td></tr>
+  <tr><td>2</td><td>1</td><td>3</td><td><code>[2, 3]</code></td><td>{0, 1, 2, 3}</td></tr>
+  <tr><td>3</td><td>2</td><td>— (0, 3 seen)</td><td><code>[3]</code></td><td>unchanged</td></tr>
+  <tr><td>4</td><td>3</td><td>4</td><td><code>[4]</code></td><td>{0, 1, 2, 3, 4}</td></tr>
+  <tr><td>5</td><td>4</td><td>— (3 seen)</td><td><code>[]</code></td><td>unchanged</td></tr>
+</table>
+
+<p>Read the popleft column: 0, then 1, 2, then 3, then 4 — layer 0, layer 1, layer 2, layer 3, in order, never interleaved. Why must this always hold? Two facts, both visible in the trace:</p>
+
+<ol>
+  <li>Only vertices being served at distance d can discover new ones — and a neighbor of a distance-d vertex is at distance at most d + 1. So everything <em>enters</em> the queue with a distance at most one more than the frontier being served.</li>
+  <li>FIFO serves in arrival order — so all of layer d (which arrived while serving layer d − 1) is served before anything that arrived after it. The queue never holds more than two consecutive layers at once.</li>
+</ol>
+
+<p>Consequence: <strong>the first time BFS reaches a vertex is via a shortest path.</strong> That's the theorem the whole shortest-path family stands on — <a href="https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/resources/lecture-9-breadth-first-search/">MIT 6.006 Lecture 9</a> proves it by induction on the levels; Erickson's <a href="https://jeffe.cs.illinois.edu/teaching/algorithms/book/05-graphs.pdf">chapter 5</a> derives it from "whatever-first search" with a FIFO bag.</p>
+
+<div class="quiz" data-answer="3">
+  <p class="quiz-q">BFS from 0 on the opening square (edges 0–1, 1–2, 2–3, 3–0). In which layer is vertex 2 served?</p>
+  <button class="quiz-opt">Layer 0 — it is served together with the start</button>
+  <button class="quiz-opt">Layer 3 — after walking all around the square</button>
+  <button class="quiz-opt">Layer 1 — the same ring as vertices 1 and 3</button>
+  <button class="quiz-opt">Layer 2 — discovered from both 1 and 3 at once</button>
+  <p class="quiz-explain">Serving 0 enqueues its direct friends 1 and 3 — that's layer 1. Serving layer 1, both 1 and 3 try to enqueue vertex 2; the first attempt marks and enqueues it, the second bounces off <code>seen</code>. Layer 3 is the DFS route's depth — exactly the wrong answer BFS exists to avoid.</p>
+</div>
+
+<h2>Counting the layers in code — the snapshot loop</h2>
+
+<p>The trace shows layers, but the template never says "layer" anywhere. To <em>count</em> them (day numbers, shortest distances), serve one whole layer per turn of an inner loop:</p>
+
+<pre><code>from collections import deque
+
+def dist_from(adj: dict[int, list[int]], start: int) -> dict[int, int]:
+    seen: set[int] = {start}
+    queue: deque[int] = deque([start])
+    dist: dict[int, int] = {}
+    d = 0
+    while queue:
+        for _ in range(len(queue)):     # ← serve exactly ONE layer
+            u = queue.popleft()
+            dist[u] = d
+            for v in adj[u]:
+                if v not in seen:
+                    seen.add(v)
+                    queue.append(v)
+        d += 1                          # the queue now holds exactly the next layer
+    return dist</code></pre>
+
+<p>The load-bearing line is <code>for _ in range(len(queue))</code>, and it works because of a Python contract worth stating explicitly: <strong><code>range(len(queue))</code> is evaluated once, when the <code>for</code> starts.</strong> If the queue holds 2 vertices, the inner loop runs exactly 2 turns — the appends that happen <em>during</em> those turns grow the queue but not the range. So each turn of the inner loop serves a snapshot: precisely the vertices that were waiting when the layer began, i.e. one full layer. When the inner loop ends, everything it enqueued is the next layer, and <code>d += 1</code> is the day advancing.</p>
+
+<p>(The common alternative — enqueue <code>(vertex, dist)</code> pairs and skip the inner loop — computes the same distances. The snapshot loop is the roadmap's workhorse because several problems ask "how many <em>rounds</em>", not "what is each vertex's distance".)</p>
+
+<h2>The cost, counted — not guessed</h2>
+
+<p>Same discipline as Clone Graph. Count executions of each moving part over a whole run (connected, undirected, adjacency lists):</p>
+
+<table>
+  <tr><th>Moving part</th><th>How many times</th><th>Why — counted</th></tr>
+  <tr><td><code>queue.append</code></td><td>V (counting the seed)</td><td><code>seen</code> is checked before every append and marks are permanent — each vertex is claimed at most once</td></tr>
+  <tr><td><code>queue.popleft</code></td><td>V</td><td>only what was appended can leave</td></tr>
+  <tr><td><code>v not in seen</code> checks</td><td>2E</td><td>each vertex's whole neighbor list is read exactly once when it is served — and the lists hold 2E entries in total, the same 2 + 2 + 2 = 6 you counted on the Clone Graph triangle</td></tr>
+  <tr><td><strong>total time</strong></td><td colspan="2"><strong>O(V + E)</strong> — V O(1)-appends + V O(1)-pops + 2E O(1)-checks, added</td></tr>
+  <tr><td><strong>space</strong></td><td colspan="2"><strong>O(V)</strong> beyond the input — three consumers: <code>seen</code> (≤ V), the queue (≤ V, thanks to mark-on-enqueue), <code>dist</code> (≤ V). No recursion stack this time: the loop replaced it.</td></tr>
+</table>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">Over one whole BFS run on a connected undirected graph: how many times does <code>queue.append</code> execute (counting the seed), and how many <code>v not in seen</code> checks happen?</p>
+  <button class="quiz-opt">V appends — and V checks, one check per vertex served</button>
+  <button class="quiz-opt">V appends — and 2E checks, one per neighbor-list entry</button>
+  <button class="quiz-opt">2E appends — and 2E checks, one per neighbor-list entry</button>
+  <button class="quiz-opt">E appends — and E checks, one check per edge walked</button>
+  <p class="quiz-explain">Appends are capped by <code>seen</code>: one claim per vertex, so V. Checks happen once per neighbor-list entry, and an undirected edge is stored in both endpoints' lists — 2E entries, 2E checks. Same count as Clone Graph's calls-from-the-loop: the 2E is a property of the adjacency structure, not of any particular algorithm.</p>
+</div>
+
+<h2>Multi-source: seed the queue with a crowd</h2>
+
+<p>Last mechanism. The rumor question flips: <em>several</em> people know the secret on day 0, and you want, for every person, the day it reaches them — the distance to the <strong>nearest</strong> source. New algorithm? No. Look at what the seed line actually claims: "these vertices are at distance 0." Nothing in the machine requires that to be one vertex:</p>
+
+<pre><code>queue: deque[int] = deque(sources)   # a crowd at distance 0, not a single start
+seen: set[int] = set(sources)        # all of them claimed before day 1 begins</code></pre>
+
+<p>That is the <em>entire</em> change — the while loop, the snapshot, the marking discipline are untouched. Layer d then means "reachable in d steps from <em>some</em> source", and since layers are served in order, the first arrival at each vertex is from its nearest source. Trace it on a line of 7 vertices with sources at 0 and 5:</p>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 460 110" width="460" height="110" role="img" aria-label="Seven cells in a row, indices 0 to 6. Cells 0 and 5 are marked S as sources. Below each cell its distance to the nearest source: 0,1,2,2,1,0,1.">
+    <rect x="40"  y="25" width="50" height="44" rx="6" fill="#0f766e"/>
+    <rect x="96"  y="25" width="50" height="44" rx="6" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+    <rect x="152" y="25" width="50" height="44" rx="6" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+    <rect x="208" y="25" width="50" height="44" rx="6" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+    <rect x="264" y="25" width="50" height="44" rx="6" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+    <rect x="320" y="25" width="50" height="44" rx="6" fill="#0f766e"/>
+    <rect x="376" y="25" width="50" height="44" rx="6" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+    <text x="65"  y="53" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#fff">S</text>
+    <text x="345" y="53" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#fff">S</text>
+    <text x="65"  y="90" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" fill="#555">0</text>
+    <text x="121" y="90" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" fill="#555">1</text>
+    <text x="177" y="90" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" fill="#555">2</text>
+    <text x="233" y="90" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" fill="#555">2</text>
+    <text x="289" y="90" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" fill="#555">1</text>
+    <text x="345" y="90" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" fill="#555">0</text>
+    <text x="401" y="90" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" fill="#555">1</text>
+    <text x="18" y="15" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#555">distance to NEAREST source, per vertex:</text>
+  </svg>
+</figure>
+
+<p>Day 0 serves {0, 5}; day 1 serves {1, 4, 6}; day 2 serves {2, 3} — the two waves ripple toward each other and meet in the middle, and <code>seen</code> is what stops them from washing over each other. Running one BFS <em>per source</em> and taking minimums would also be correct — and would cost O(sources × (V + E)). Seeding the crowd pays O(V + E) once, total.</p>
+
+<h2>Where this lesson deliberately stops</h2>
+
+<div class="callout key">
+  <span class="callout-title">The last step is yours</span>
+  <p>You now hold every mechanism P4 needs: walking a grid as an implicit graph (L2), BFS with mark-on-enqueue, layer counting with the snapshot loop, multi-source seeding. This lesson does <strong>not</strong> show you how they fit together on that problem — nor the one small accounting question Rotting Oranges adds after the traversal ends. By your own request after L3: the assembly is where the learning lives, and it belongs to you.</p>
+</div>
+
+<div class="callout try-it">
+  <span class="callout-title">Drill first, then P4</span>
+  <ol>
+    <li>Close this lesson, then run the closed-book drill: <code>python3.14 learning/graphs/lessons/0009-bfs-drill.py</code>. Report the output verbatim, reds included.</li>
+    <li>All green unlocks <strong>P4 — <a href="https://leetcode.com/problems/rotting-oranges/">Rotting Oranges (LC 994)</a>, solo</strong>. Solve on LeetCode; at hand-in, the per-phase cost table (with the space row) will be waiting, as always.</li>
+  </ol>
+</div>
+
+<h2>Primary source</h2>
+
+<p><a href="https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/resources/lecture-9-breadth-first-search/">MIT 6.006 (Spring 2020), Lecture 9 — Breadth-First Search</a>: the level-by-level construction and the shortest-path proof, the rigorous version of this lesson's layer argument. Companion reading: Erickson, <a href="https://jeffe.cs.illinois.edu/teaching/algorithms/book/05-graphs.pdf">ch. 5</a> (BFS and DFS as the same algorithm with different bags); <a href="https://docs.python.org/3/library/collections.html#collections.deque">the <code>deque</code> docs</a> for the queue contract. To <em>watch</em> a BFS ripple: <a href="https://visualgo.net/en/dfsbfs">VisuAlgo</a>.</p>
+
+<p>Quick-reference version of this lesson: <a href="../reference/bfs-traversal.html">BFS cheat sheet</a> · from L2: <a href="../reference/dfs-traversal.html">DFS traversal</a> · from L3: <a href="../reference/copy-a-graph.html">Copying a graph</a> · from L1: <a href="../reference/graph-representations.html">Graph representations</a>.</p>
+
+<div class="ask-teacher">
+  Anything unclear — why FIFO forces the layer order, what the snapshot loop actually freezes, when multi-source is legal — ask your teacher in the session before opening the drill. Questions are free; reds in the drill are data.
+</div>
+
+<div class="lesson-nav">
+  <span>← <a href="./0007-graph-copies-and-identity.html">L3 — Copying a Graph</a></span>
+  <span>next: drill 0009 → P4 (Rotting Oranges)</span>
+</div>
+
+</body>
+</html>

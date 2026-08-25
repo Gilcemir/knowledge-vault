@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference — BFS Traversal</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1>BFS Traversal — cheat sheet</h1>
+<p class="lesson-meta">Graphs track · reference · distilled from <a href="../lessons/0008-bfs-layers-are-distances.html">L4</a></p>
+
+<h2>Glossary</h2>
+<table>
+  <tr><th>Term</th><th>Meaning</th></tr>
+  <tr><td><strong>queue / FIFO</strong></td><td>waiting line: join at the back (<code>append</code>), served from the front (<code>popleft</code>) — first in, first out</td></tr>
+  <tr><td><strong>enqueue / dequeue</strong></td><td>join the line / be served and leave it</td></tr>
+  <tr><td><strong>layer d (level)</strong></td><td>all vertices at distance exactly d from the seed(s)</td></tr>
+  <tr><td><strong>frontier</strong></td><td>the layer currently being served — the wavefront</td></tr>
+  <tr><td><strong>multi-source</strong></td><td>several vertices seeded at distance 0; BFS then computes distance to the <em>nearest</em> source</td></tr>
+</table>
+
+<h2>The queue: <code>collections.deque</code></h2>
+<pre><code>from collections import deque
+q = deque([a, b])   # build, left to right           O(len)
+q.append(x)         # join at the RIGHT, returns None O(1)
+q.popleft()         # serve from the LEFT; IndexError if empty  O(1)
+while q: ...        # empty deque is falsy</code></pre>
+<p class="bad">Never <code>list.pop(0)</code> as a queue — O(n) shift per pop turns O(V + E) into O(V²).</p>
+
+<h2>Template — reachability (distance order for free)</h2>
+<pre><code>def bfs(adj: dict[int, list[int]], start: int) -> set[int]:
+    seen: set[int] = {start}
+    queue: deque[int] = deque([start])
+    while queue:
+        u = queue.popleft()
+        for v in adj[u]:
+            if v not in seen:
+                seen.add(v)          # mark ON ENQUEUE — never on dequeue
+                queue.append(v)
+    return seen</code></pre>
+
+<h2>Template — distances via the snapshot loop</h2>
+<pre><code>def dist_from(adj: dict[int, list[int]], start: int) -> dict[int, int]:
+    seen: set[int] = {start}
+    queue: deque[int] = deque([start])
+    dist: dict[int, int] = {}
+    d = 0
+    while queue:
+        for _ in range(len(queue)):  # len evaluated ONCE -> exactly one layer
+            u = queue.popleft()
+            dist[u] = d
+            for v in adj[u]:
+                if v not in seen:
+                    seen.add(v)
+                    queue.append(v)
+        d += 1
+    return dist</code></pre>
+
+<h2>Multi-source — the only change is the seed</h2>
+<pre><code>queue = deque(sources)   # crowd at distance 0
+seen = set(sources)</code></pre>
+
+<h2>Rules that keep it correct</h2>
+<ul>
+  <li><strong>Mark on enqueue.</strong> Mark-on-dequeue lets a waiting vertex be enqueued again; the queue swells toward 2E. Same disease as L2's mark-after-loop and L3's register-after-wiring: claim before others can re-claim.</li>
+  <li><strong>Layers = distances</strong> because (1) serving layer d only discovers vertices at ≤ d + 1, and (2) FIFO serves in arrival order — the queue never holds more than two consecutive layers. First arrival = shortest path.</li>
+  <li><strong>Grid BFS</strong> = same template; the queue holds <code>(r, c)</code> tuples, neighbors come from the L2 three-question guard (exists? new? allowed?).</li>
+</ul>
+
+<h2>Cost (undirected, adjacency lists)</h2>
+<table>
+  <tr><th>Part</th><th>Count</th><th>Why</th></tr>
+  <tr><td>appends / pops</td><td>V each</td><td><code>seen</code> caps each vertex at one claim</td></tr>
+  <tr><td>neighbor checks</td><td>2E</td><td>every list read once; lists hold 2E entries total</td></tr>
+  <tr><td><strong>time</strong></td><td colspan="2"><strong>O(V + E)</strong></td></tr>
+  <tr><td><strong>space</strong></td><td colspan="2"><strong>O(V)</strong> extra: <code>seen</code> ≤ V, queue ≤ V, <code>dist</code> ≤ V — no recursion stack, the loop replaced it</td></tr>
+</table>
+
+<p>Sources: <a href="https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/resources/lecture-9-breadth-first-search/">MIT 6.006 L9</a> · <a href="https://jeffe.cs.illinois.edu/teaching/algorithms/book/05-graphs.pdf">Erickson ch. 5</a> · <a href="https://docs.python.org/3/library/collections.html#collections.deque">deque docs</a></p>
+
+</body>
+</html>

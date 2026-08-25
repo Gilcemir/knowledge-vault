@@ -19,7 +19,7 @@
 - [Docs: `copy` — Python official docs](https://docs.python.org/3/library/copy.html)
   Verbatim definitions of shallow vs deep copy; `deepcopy`'s `memo` dictionary — the stdlib's own old→new map and why recursive objects need it. Use for: L3 (graph copies & identity) primary source, "the stdlib already ships this" moment. Verified 2026-08-20 (memo-dictionary passage quoted).
 - [Docs: `collections.deque` — Python official docs](https://docs.python.org/3/library/collections.html#collections.deque)
-  O(1) `popleft` — the BFS queue. Use for: why `list.pop(0)` is the wrong queue.
+  O(1) `popleft` — the BFS queue. Use for: why `list.pop(0)` is the wrong queue. Verified 2026-08-25 (append/popleft contracts and the list `pop(0)`/`insert(0, v)` O(n) passage quoted verbatim in L4).
 - [Tool: VisuAlgo — Graph Traversal (DFS/BFS)](https://visualgo.net/en/dfsbfs)
   Animated DFS/BFS plus topological sort (both DFS-based and Kahn's). Use for: watching a traversal before hand-tracing one. Verified 2026-08-14.
 - [Videos: NeetCode YouTube channel](https://www.youtube.com/@NeetCode)
