@@ -12,7 +12,7 @@ HOW TO USE
 There are no solutions in this file.
 """
 
-from collections import deque
+from collections import deque, defaultdict
 
 
 # ----------------------------------------------------------------------------
@@ -34,8 +34,32 @@ def bfs_dist(n: int, edges: list[list[int]], start: int) -> dict[int, int]:
       - No recursion: BFS is a loop and a queue.
       - Return a dict mapping int to int.
     """
-    raise NotImplementedError
 
+    adj = create_adj(n, edges)
+    distances: dict[int, int] = {}
+    seen: set[int] = {start}
+    dq: deque[int] = deque([start])
+    d = 0
+
+    while dq:
+        for _ in range(len(dq)):
+            v: int = dq.popleft()
+            distances[v] = d
+
+            for u in adj[v]:
+                if u not in seen:
+                    seen.add(u)
+                    dq.append(u)
+        d += 1
+
+    return distances
+
+def create_adj(n: int, edges: list[list[int]]) -> dict[int, list[int]]:
+    adj: dict[int, list[int]] = {v: [] for v in range(n)}
+    for u, v in edges:
+        adj[u].append(v)
+        adj[v].append(u)
+    return adj
 
 def steps(grid: list[list[str]], start: tuple[int, int],
           target: tuple[int, int]) -> int:
@@ -51,7 +75,27 @@ def steps(grid: list[list[str]], start: tuple[int, int],
       - Walls block: a path must consist of open cells only.
       - Return an int (a plain count, or -1).
     """
-    raise NotImplementedError
+    x, y = len(grid), len(grid[0])
+    seen: set[tuple[int, int]] = { start }
+    queue: deque[tuple[int, int]] = deque([start])
+
+    d = 0
+    while queue:
+        for _ in range(len(queue)):
+            cell = queue.popleft()
+            if cell == target:
+                return d
+
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                new_cell = (cell[0] + dx, cell[1] + dy)
+                if (0 <= new_cell[0] < x
+                        and 0 <= new_cell[1] < y
+                        and new_cell not in seen
+                        and grid[new_cell[0]][new_cell[1]] != '#'):
+                    seen.add(new_cell)
+                    queue.append(new_cell)
+        d += 1
+    return -1
 
 
 def nearest(n: int, edges: list[list[int]],
@@ -69,7 +113,24 @@ def nearest(n: int, edges: list[list[int]],
       - Vertices unreachable from every source must not appear.
       - No recursion. Return a dict mapping int to int.
     """
-    raise NotImplementedError
+    adj = create_adj(n, edges)
+    seen: set[int] = set(sources)
+    queue: deque[int] = deque(sources)
+    distances: dict[int, int] = {}
+
+    d = 0
+    while queue:
+        for _ in range(len(queue)):
+            v = queue.popleft()
+            distances[v] = d
+
+            for u in adj[v]:
+                if u not in seen:
+                    seen.add(u)
+                    queue.append(u)
+
+        d+= 1
+    return distances
 
 
 # ----------------------------------------------------------------------------
@@ -112,12 +173,12 @@ def nearest(n: int, edges: list[list[int]],
 #     "popleft shrinks it as fast as append grows it"
 
 KNOWLEDGE: dict[str, str | None] = {
-    "bfs_total_cost": None,
-    "queue_append_count": None,
-    "seen_check_count": None,
-    "mark_moment": None,
-    "layer_order_why": None,
-    "snapshot_why": None,
+    "bfs_total_cost": "O(V + E)",
+    "queue_append_count": "at most V times",
+    "seen_check_count": "exactly 2E",
+    "mark_moment": "the moment v is appended to the queue",
+    "layer_order_why": "older discoveries are always served before newer ones",
+    "snapshot_why": "range evaluates len once, when the for begins",
 }
 
 
