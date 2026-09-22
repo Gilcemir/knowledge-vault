@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L5 — Thinking From the Boundary Inward</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>L5 — Thinking From the Boundary Inward</h1>
+<p class="lesson-meta">Graphs track · lesson 5 of the main line · ~25 min · 2026-09-17 · prereq: <a href="./0005-dfs-with-cycles.html">L2 — DFS with Cycles</a>, <a href="./0008-bfs-layers-are-distances.html">L4 — BFS: Layers Are Distances</a> · reference: <a href="../reference/bfs-traversal.html">BFS</a>, <a href="../reference/dfs-traversal.html">DFS</a></p>
+
+<h2>The problem first — a question pointing the wrong way</h2>
+
+<p>A grid of terrain heights. Rain falls on every cell. Water flows from a cell to any of its four neighbours whose height is <strong>less than or equal</strong> to its own; it never flows uphill. The question:</p>
+
+<blockquote>Which cells drain to the <strong>east edge</strong> of the map?</blockquote>
+
+<p>Read that literally and it tells you what to write. For each cell, start a flood there, follow the water, see whether it ever lands on the east edge. You already own that flood — it's your L2 DFS with a condition on the neighbour test. So:</p>
+
+<pre><code>for each of the m·n cells:
+    flood from that cell        # O(m·n) in the worst case
+    did it touch the east edge?</code></pre>
+
+<p>It is correct. Now price it. On a modest 200&times;200 grid that is 40 000 floods, each up to 40 000 cells: <strong>1 600 000 000</strong> cell visits. Your P4 solution touched 40 000. The literal reading of the question costs you a factor of forty thousand.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">The shape of the trouble</span>
+  The question asks about arrows pointing <em>toward</em> a target. A traversal can only walk arrows <em>away</em> from where it starts. Every flood you run is an attempt to cover that mismatch by brute force.
+</div>
+
+<h2>New: the grid's edges now have a direction</h2>
+
+<p>In P1 through P5, adjacency was symmetric: if A was a neighbour of B, then B was a neighbour of A. Walls and Gates, Rotting Oranges, Number of Islands — all of them. Water breaks that.</p>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 460 130" width="460" height="130" role="img" aria-label="Two grid cells of height 5 and height 3. A single arrow points from the 5 cell to the 3 cell. No arrow points back.">
+    <defs>
+      <marker id="arrD" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#0f766e"/>
+      </marker>
+      <marker id="arrX" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#b02a37"/>
+      </marker>
+    </defs>
+    <rect x="120" y="30" width="60" height="60" rx="6" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <rect x="280" y="30" width="60" height="60" rx="6" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <text x="150" y="68" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#1a1a1a">5</text>
+    <text x="310" y="68" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#1a1a1a">3</text>
+    <line x1="188" y1="49" x2="272" y2="49" stroke="#0f766e" stroke-width="2.5" marker-end="url(#arrD)"/>
+    <line x1="272" y1="73" x2="188" y2="73" stroke="#b02a37" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arrX)"/>
+    <text x="230" y="40" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#0f766e">3 &le; 5 &nbsp;water flows</text>
+    <text x="230" y="97" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#b02a37">5 &le; 3 is false &nbsp;no edge</text>
+    <text x="150" y="112" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#555">A</text>
+    <text x="310" y="112" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#555">B</text>
+  </svg>
+</figure>
+
+<p>A <strong>directed edge</strong> is an edge you may cross in one stated direction only. Here the grid still has four neighbours per cell, but between A and B there is an edge A&rarr;B and <em>no</em> edge B&rarr;A. The picture above is the whole of the new vocabulary: same cells, same adjacency, one-way arrows.</p>
+
+<h2>The move: turn every arrow around</h2>
+
+<p>If the trouble is that arrows point the wrong way, reverse them. That object has a name. From CP-Algorithms:</p>
+
+<blockquote>"Let G<sup>T</sup> denote the <em>transpose graph</em> of G, obtained by reversing the edge directions in G."<br>
+<span style="font-style: normal; font-size: 0.85rem;">— <a href="https://cp-algorithms.com/graph/strongly-connected-components.html">CP-Algorithms, <em>Strongly Connected Components</em></a> (verified 2026-09-17)</span></blockquote>
+
+<p>Also called the <strong>reverse graph</strong>. Now the claim that makes it useful:</p>
+
+<div class="callout key">
+  <span class="callout-title">The inversion</span>
+  <strong>X can reach T in G</strong> &nbsp;&equiv;&nbsp; <strong>T can reach X in G<sup>T</sup></strong>.
+</div>
+
+<p>Not a theorem you need to memorise — it is the definition, read slowly. A path from X to T in G is a list of cells: X, c<sub>1</sub>, c<sub>2</sub>, …, T, where every consecutive pair has an arrow. Reverse the arrows and that <em>same list, read right to left</em> — T, …, c<sub>2</sub>, c<sub>1</sub>, X — has an arrow at every consecutive pair too. The path did not go anywhere. Only your reading direction changed.</p>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 460 180" width="460" height="180" role="img" aria-label="Top row: cells X, c1, T with arrows pointing left to right. Bottom row: the same cells with all arrows pointing right to left.">
+    <defs>
+      <marker id="arrF" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#0f766e"/>
+      </marker>
+      <marker id="arrB" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#8a6d00"/>
+      </marker>
+    </defs>
+    <text x="14" y="42" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">in G</text>
+    <circle cx="150" cy="38" r="19" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="250" cy="38" r="19" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="350" cy="38" r="19" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+    <text x="150" y="43" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" font-weight="700">X</text>
+    <text x="250" y="43" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" font-weight="700">c₁</text>
+    <text x="350" y="43" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" font-weight="700">T</text>
+    <line x1="171" y1="38" x2="229" y2="38" stroke="#0f766e" stroke-width="2.5" marker-end="url(#arrF)"/>
+    <line x1="271" y1="38" x2="329" y2="38" stroke="#0f766e" stroke-width="2.5" marker-end="url(#arrF)"/>
+    <text x="400" y="42" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#0f766e">X reaches T</text>
+
+    <text x="14" y="142" font-family="-apple-system, Helvetica, sans-serif" font-size="12" fill="#555">in Gᵀ</text>
+    <circle cx="150" cy="138" r="19" fill="#fdfdfa" stroke="#8a6d00" stroke-width="2"/>
+    <circle cx="250" cy="138" r="19" fill="#fdfdfa" stroke="#8a6d00" stroke-width="2"/>
+    <circle cx="350" cy="138" r="19" fill="#fff8e1" stroke="#8a6d00" stroke-width="2"/>
+    <text x="150" y="143" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" font-weight="700">X</text>
+    <text x="250" y="143" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" font-weight="700">c₁</text>
+    <text x="350" y="143" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" font-weight="700">T</text>
+    <line x1="229" y1="138" x2="171" y2="138" stroke="#8a6d00" stroke-width="2.5" marker-end="url(#arrB)"/>
+    <line x1="329" y1="138" x2="271" y2="138" stroke="#8a6d00" stroke-width="2.5" marker-end="url(#arrB)"/>
+    <text x="400" y="142" font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#8a6d00">T reaches X</text>
+  </svg>
+</figure>
+
+<p>So instead of asking every cell "do you reach the edge?", stand <em>on</em> the edge and ask once: "walking backwards, who do I reach?" One traversal. O(m·n).</p>
+
+<h2>The part that bites: what the reversed arrow actually tests</h2>
+
+<p>You never build G<sup>T</sup> as a data structure. You build it by rewriting one line — the neighbour condition. Get this line backwards and the code runs happily and answers a different question.</p>
+
+<p>In G you stand on A and consider neighbour B; the arrow A&rarr;B exists when <code>h[B] &lt;= h[A]</code>. In G<sup>T</sup> that same arrow is traversed the other way: you stand on <strong>B</strong> and step to <strong>A</strong>. The condition is unchanged — but you must now express it from B's point of view, with the cell you're standing on first:</p>
+
+<table>
+  <tr><th>Graph</th><th>Standing on</th><th>Stepping to</th><th>Condition, written from where you stand</th><th>In words</th></tr>
+  <tr><td>G</td><td><code>cur</code></td><td><code>nxt</code></td><td><code>h[nxt] &lt;= h[cur]</code></td><td>walk downhill</td></tr>
+  <tr><td>G<sup>T</sup></td><td><code>cur</code></td><td><code>nxt</code></td><td><code>h[nxt] &gt;= h[cur]</code></td><td>walk <strong>uphill</strong></td></tr>
+</table>
+
+<div class="callout gotcha">
+  <span class="callout-title">Why this is easy to get wrong</span>
+  Nothing about the water changed. The inequality flipped only because the <em>subject of the sentence</em> changed from the higher cell to the lower one. If you reverse a search and leave the condition alone, you have reversed nothing.
+</div>
+
+<h2>Seeding the whole boundary at once</h2>
+
+<p>The east edge is not one cell, it's a column of them. You already solved this at P5: put every source in <code>seen</code> and in the queue before the first pop. The formal name for the problem you were solving is worth having —</p>
+
+<blockquote>"Given a digraph and a <em>set</em> of source vertices, is there a directed path from <em>any</em> vertex in the set to v?"<br>
+<span style="font-style: normal; font-size: 0.85rem;">— Sedgewick &amp; Wayne, <a href="https://algs4.cs.princeton.edu/42digraph/"><em>Algorithms</em> §4.2, Directed Graphs</a>, "multiple-source reachability" (verified 2026-09-17)</span></blockquote>
+
+<p>— and notice the word <em>digraph</em>. Multi-source seeding was never a grid trick; it is the standard way to ask a reachability question about a whole set at once. Your gates, your rotten oranges and this edge are the same construction.</p>
+
+<h2>Trace it — 3&times;3, by hand</h2>
+
+<p>Heights on the left. The east edge is the right-hand column, shaded. Reversed rule: from <code>cur</code>, step to any neighbour with <code>h[nxt] &gt;= h[cur]</code>.</p>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 460 190" width="460" height="190" role="img" aria-label="A 3 by 3 grid of heights: row 0 is 2 1 3, row 1 is 4 5 1, row 2 is 6 2 1. The right-hand column is shaded as the east edge.">
+    <g font-family="-apple-system, Helvetica, sans-serif" font-size="19" font-weight="700" text-anchor="middle">
+      <rect x="130" y="25" width="48" height="48" fill="#fdfdfa" stroke="#0f766e" stroke-width="1.5"/>
+      <rect x="178" y="25" width="48" height="48" fill="#fdfdfa" stroke="#0f766e" stroke-width="1.5"/>
+      <rect x="226" y="25" width="48" height="48" fill="#e6f4f1" stroke="#0f766e" stroke-width="1.5"/>
+      <rect x="130" y="73" width="48" height="48" fill="#fdfdfa" stroke="#0f766e" stroke-width="1.5"/>
+      <rect x="178" y="73" width="48" height="48" fill="#fdfdfa" stroke="#0f766e" stroke-width="1.5"/>
+      <rect x="226" y="73" width="48" height="48" fill="#e6f4f1" stroke="#0f766e" stroke-width="1.5"/>
+      <rect x="130" y="121" width="48" height="48" fill="#fdfdfa" stroke="#0f766e" stroke-width="1.5"/>
+      <rect x="178" y="121" width="48" height="48" fill="#fdfdfa" stroke="#0f766e" stroke-width="1.5"/>
+      <rect x="226" y="121" width="48" height="48" fill="#e6f4f1" stroke="#0f766e" stroke-width="1.5"/>
+      <text x="154" y="56">2</text><text x="202" y="56">1</text><text x="250" y="56">3</text>
+      <text x="154" y="104">4</text><text x="202" y="104">5</text><text x="250" y="104">1</text>
+      <text x="154" y="152">6</text><text x="202" y="152">2</text><text x="250" y="152">1</text>
+    </g>
+    <g font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#555" text-anchor="middle">
+      <text x="154" y="18">c0</text><text x="202" y="18">c1</text><text x="250" y="18">c2</text>
+      <text x="118" y="56">r0</text><text x="118" y="104">r1</text><text x="118" y="152">r2</text>
+      <text x="250" y="186" fill="#0f766e">east edge</text>
+    </g>
+  </svg>
+</figure>
+
+<table>
+  <tr><th>Layer</th><th>Popped</th><th>Neighbours tested (h[nxt] &ge; h[cur]?)</th><th>Enqueued</th></tr>
+  <tr><td>seed</td><td>—</td><td>—</td><td>(0,2) (1,2) (2,2)</td></tr>
+  <tr><td>0</td><td>(0,2) h=3</td><td>(1,2) seen · (0,1) h=1 &ge; 3 <span class="bad">no</span></td><td>—</td></tr>
+  <tr><td>0</td><td>(1,2) h=1</td><td>(0,2) seen · (2,2) seen · (1,1) h=5 &ge; 1 <span class="good">yes</span></td><td>(1,1)</td></tr>
+  <tr><td>0</td><td>(2,2) h=1</td><td>(1,2) seen · (2,1) h=2 &ge; 1 <span class="good">yes</span></td><td>(2,1)</td></tr>
+  <tr><td>1</td><td>(1,1) h=5</td><td>(0,1) h=1 <span class="bad">no</span> · (1,0) h=4 <span class="bad">no</span> · (2,1) seen · (1,2) seen</td><td>—</td></tr>
+  <tr><td>1</td><td>(2,1) h=2</td><td>(1,1) seen · (2,0) h=6 &ge; 2 <span class="good">yes</span> · (2,2) seen</td><td>(2,0)</td></tr>
+  <tr><td>2</td><td>(2,0) h=6</td><td>(1,0) h=4 &ge; 6 <span class="bad">no</span> · (2,1) seen</td><td>—</td></tr>
+</table>
+
+<p>Six cells drain east: (0,2) (1,2) (2,2) (1,1) (2,1) (2,0). Three do not: (0,0) (0,1) (1,0).</p>
+
+<div class="callout try-it">
+  <span class="callout-title">Check one forward</span>
+  Take (2,0), height 6 — the reversed search says it drains. Walk it forwards, downhill: 6 &rarr; (2,1) h=2 &rarr; (2,2) h=1, east edge. ✓ Now do (1,0), height 4, which the search says does <em>not</em> drain. Its only downhill neighbour is (0,0) h=2; from there, (0,1) h=1; from there — nothing lower, and (0,2) h=3 is uphill. Dead end. ✓
+</div>
+
+<h2>What it cost</h2>
+
+<table>
+  <tr><th>Approach</th><th>Traversals</th><th>Cell visits</th><th>On 200&times;200</th></tr>
+  <tr><td>Flood from every cell</td><td>m·n</td><td>O((m·n)²)</td><td>~1.6 × 10⁹</td></tr>
+  <tr><td>One reversed flood from the boundary</td><td>1</td><td>O(m·n)</td><td>40 000</td></tr>
+</table>
+
+<p>The algorithm did not get cleverer. You asked the question in the direction the machine can actually walk.</p>
+
+<h2>Check yourself</h2>
+
+<div class="quiz" data-answer="3">
+  <p class="quiz-q">The naive plan runs one flood per cell. What is its total cost?</p>
+  <button class="quiz-opt">Constant per cell, because visited prevents repeated work</button>
+  <button class="quiz-opt">Logarithmic in cells, since the frontier shrinks fast</button>
+  <button class="quiz-opt">Linear in cells, because each flood is cheap</button>
+  <button class="quiz-opt">Quadratic in cells: one whole flood per cell</button>
+  <p class="quiz-explain">m·n floods, each visiting up to m·n cells. The visited set makes one flood linear — it does nothing about running m·n of them.</p>
+</div>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">Water flows A→B when h[B] ≤ h[A]. Standing on a cell in the reversed grid, which neighbours do you step to?</p>
+  <button class="quiz-opt">Those strictly lower than the cell you currently occupy</button>
+  <button class="quiz-opt">Those at least as high as the cell you occupy</button>
+  <button class="quiz-opt">Those exactly equal in height to the cell you occupy</button>
+  <button class="quiz-opt">Those adjacent to you regardless of the heights involved</button>
+  <p class="quiz-explain">The water rule never changed; the subject of the sentence did. Standing on the <em>lower</em> cell and stepping to the higher one, the same edge reads h[nxt] ≥ h[cur] — uphill.</p>
+</div>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">What does seeding every boundary cell into the queue before the first pop buy you?</p>
+  <button class="quiz-opt">One flood per edge cell, with results summed afterwards</button>
+  <button class="quiz-opt">A shorter queue, because the sources share their layers</button>
+  <button class="quiz-opt">One flood total, treating the whole edge as source</button>
+  <button class="quiz-opt">A correct order, since the sources sort themselves first</button>
+  <p class="quiz-explain">Multiple-source reachability: a set of sources, one traversal. Exactly what your gates did in P5 and your rotten oranges in P4.</p>
+</div>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">What makes the reversed search give the same answer as the naive one?</p>
+  <button class="quiz-opt">Any path, read backwards, is a path when reversed</button>
+  <button class="quiz-opt">Grid adjacency is symmetric, so direction never matters here</button>
+  <button class="quiz-opt">BFS visits every cell, so both searches must agree</button>
+  <button class="quiz-opt">The visited set prevents any cell being counted twice</button>
+  <p class="quiz-explain">It is the definition of G<sup>T</sup> read slowly — the same list of cells, the same consecutive pairs, read right to left. Option 1 is exactly what stops being true once edges are directed.</p>
+</div>
+
+<h2>What I am deliberately not telling you</h2>
+
+<p>This lesson gave you three things: the inversion, the flipped condition, and boundary seeding. It did <em>not</em> assemble them into either problem you're about to meet.</p>
+
+<ul>
+  <li><strong>P6</strong> has more than one boundary, and the answer is not "which cells reach this one".</li>
+  <li><strong>P7</strong> is not about flow at all. The grid is undirected there, so G<sup>T</sup> = G and the inversion buys you nothing — but "start from the boundary" still does. Ask yourself what the boundary is an exception <em>to</em>.</li>
+</ul>
+
+<p>That assembly is the work. Hints on request, escalating, as always.</p>
+
+<h2>Read this</h2>
+
+<p><strong>Primary source:</strong> <a href="https://algs4.cs.princeton.edu/42digraph/">Sedgewick &amp; Wayne, <em>Algorithms</em> §4.2 — Directed Graphs</a>. Read the reachability section: single-source, multiple-source, and why a digraph's reachability is not symmetric. It is the cleanest treatment of the idea this lesson is built on, and it does not touch either roadmap problem. Secondary: <a href="https://jeffe.cs.illinois.edu/teaching/algorithms/book/05-graphs.pdf">Erickson, <em>Algorithms</em> ch. 5</a> §5.4 on reachability and whatever-first search.</p>
+
+<div class="ask-teacher">
+  Stuck on any of it — the flipped inequality especially — ask. Ambiguity here costs you an accepted-but-wrong-question solution, which is the expensive kind of bug.
+</div>
+
+<div class="lesson-nav">
+  <a href="./0008-bfs-layers-are-distances.html">← L4 — BFS: Layers Are Distances</a>
+  <a href="../reference/reverse-the-question.html">Reference: Reverse the Question →</a>
+</div>
+
+</body>
+</html>

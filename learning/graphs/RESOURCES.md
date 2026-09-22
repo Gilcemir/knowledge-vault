@@ -20,6 +20,10 @@
   Verbatim definitions of shallow vs deep copy; `deepcopy`'s `memo` dictionary — the stdlib's own old→new map and why recursive objects need it. Use for: L3 (graph copies & identity) primary source, "the stdlib already ships this" moment. Verified 2026-08-20 (memo-dictionary passage quoted).
 - [Docs: `collections.deque` — Python official docs](https://docs.python.org/3/library/collections.html#collections.deque)
   O(1) `popleft` — the BFS queue. Use for: why `list.pop(0)` is the wrong queue. Verified 2026-08-25 (append/popleft contracts and the list `pop(0)`/`insert(0, v)` O(n) passage quoted verbatim in L4).
+- [Book: Sedgewick & Wayne, _Algorithms_ 4ed — §4.2 Directed Graphs](https://algs4.cs.princeton.edu/42digraph/)
+  Digraphs, reachability, and **multiple-source reachability** — "Given a digraph and a _set_ of source vertices, is there a directed path from _any_ vertex in the set to v?" (quoted verbatim in L5). Use for: the formal name and framing behind boundary/multi-source seeding; spoils none of the 13 roadmap problems. Verified 2026-09-17.
+- [Article: CP-Algorithms — Strongly Connected Components](https://cp-algorithms.com/graph/strongly-connected-components.html)
+  Source of the verbatim transpose definition used in L5: "Let $G^T$ denote the _transpose graph_ of $G$, obtained by reversing the edge directions in $G$." Use for: the reverse-graph vocabulary now, and Kosaraju later if a problem ever brushes SCCs. Verified 2026-09-17.
 - [Tool: VisuAlgo — Graph Traversal (DFS/BFS)](https://visualgo.net/en/dfsbfs)
   Animated DFS/BFS plus topological sort (both DFS-based and Kahn's). Use for: watching a traversal before hand-tracing one. Verified 2026-08-14.
 - [Videos: NeetCode YouTube channel](https://www.youtube.com/@NeetCode)
@@ -38,3 +42,5 @@
 
 - No verified visualizer for **union-find** yet (VisuAlgo has `/ufds`, unverified) — check before the DSU lesson.
 - Multi-source BFS (Rotting Oranges, Walls and Gates) rarely gets standalone high-trust treatment without spoiling those exact problems — the lesson will need first-principles construction, like the heap track's two-heaps lesson.
+  **Resolved 2026-09-17:** algs4 §4.2 gives the technique a name and a problem statement without touching either problem — used as L5's primary source.
+- Erickson ch. 5 is too large for automated fetching (>10 MB); quote it from a local copy or cite by section only.

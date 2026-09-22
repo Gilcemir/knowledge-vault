@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference — Reverse the Question</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1>Reverse the Question</h1>
+<p class="lesson-meta">Graphs track · reference sheet · from <a href="../lessons/0010-thinking-from-the-boundary-inward.html">L5</a> · see also <a href="./bfs-traversal.html">BFS</a>, <a href="./dfs-traversal.html">DFS</a>, <a href="./graph-representations.html">Representations</a></p>
+
+<h2>The trigger</h2>
+
+<p>You reach for this the moment a problem asks:</p>
+
+<blockquote>"which vertices can reach <em>T</em>?" &nbsp;(rather than "what can <em>T</em> reach?")</blockquote>
+
+<p>A traversal walks arrows forward from where it starts. A question about arrows pointing <em>toward</em> a target is pointing the wrong way. Answering it literally means one traversal per vertex: <strong>O((V+E)·V)</strong>, or O((m·n)²) on a grid.</p>
+
+<h2>The rule</h2>
+
+<div class="callout key">
+  <span class="callout-title">Inversion</span>
+  <strong>X reaches T in G</strong> &nbsp;&equiv;&nbsp; <strong>T reaches X in G<sup>T</sup></strong><br>
+  <span style="font-size:0.9rem">A path is a list of vertices with an arrow at every consecutive pair. Reverse every arrow and the same list read backwards is still such a path. Nothing moved; the reading direction changed.</span>
+</div>
+
+<p>G<sup>T</sup> — the <strong>transpose</strong> or <strong>reverse graph</strong> — is "G with the edge directions reversed" (<a href="https://cp-algorithms.com/graph/strongly-connected-components.html">CP-Algorithms</a>). One traversal from T over G<sup>T</sup> answers the question for every vertex at once: <strong>O(V+E)</strong>.</p>
+
+<h2>Building G<sup>T</sup> on a grid: rewrite one line</h2>
+
+<p>You never materialise it. The direction lives in the neighbour test, so reversing the graph means rewriting that test from the point of view of the cell you are now standing on.</p>
+
+<table>
+  <tr><th>If the forward rule is…</th><th>…the reversed rule is</th></tr>
+  <tr><td><code>h[nxt] &lt;= h[cur]</code> (flow downhill)</td><td><code>h[nxt] &gt;= h[cur]</code> (climb uphill)</td></tr>
+  <tr><td><code>h[nxt] &lt; h[cur]</code> (strictly down)</td><td><code>h[nxt] &gt; h[cur]</code> (strictly up)</td></tr>
+  <tr><td><code>cost[nxt] &lt;= budget[cur]</code></td><td>express the <em>same</em> edge with <code>cur</code> as the far end</td></tr>
+  <tr><td>plain adjacency (undirected)</td><td>unchanged — G<sup>T</sup> = G, the inversion buys nothing</td></tr>
+</table>
+
+<div class="callout gotcha">
+  <span class="callout-title">The one bug</span>
+  Reversing the search and leaving the condition alone. The code runs, terminates, and answers a different question. Sanity check every time: take one cell the reversed search claims, and walk it <em>forwards</em> to the target by hand.
+</div>
+
+<h2>Seeding a whole boundary</h2>
+
+<p>The target is usually a set (an edge, a border, every gate, every rotten orange), not one vertex. That is <strong>multiple-source reachability</strong>: "Given a digraph and a <em>set</em> of source vertices, is there a directed path from <em>any</em> vertex in the set to v?" (<a href="https://algs4.cs.princeton.edu/42digraph/">Sedgewick &amp; Wayne §4.2</a>).</p>
+
+<pre><code>sources = [ ... every boundary cell ... ]
+seen  = set(sources)      # mark ALL seeds before the first pop
+queue = deque(sources)
+while queue:
+    r, c = queue.popleft()
+    for dr, dc in ((1,0), (-1,0), (0,1), (0,-1)):
+        nr, nc = r + dr, c + dc
+        if in_bounds(nr, nc) and (nr, nc) not in seen and REVERSED_CONDITION:
+            seen.add((nr, nc))
+            queue.append((nr, nc))
+# `seen` is now every cell that reaches the boundary in the original direction</code></pre>
+
+<p>Costs one pass to collect the sources plus one traversal: <strong>&Theta;(m·n)</strong> either way — there is no cheaper case, the seeding scan alone reads every cell.</p>
+
+<h2>Two shapes of boundary problem</h2>
+
+<table>
+  <tr><th>Shape</th><th>What the flood gives you</th><th>The assembly</th></tr>
+  <tr><td>Reachability to a set, edges <strong>directed</strong></td><td>the set of cells that drain to that boundary</td><td>combine per-boundary sets</td></tr>
+  <tr><td>Reachability to a set, edges <strong>undirected</strong></td><td>the cells connected to the boundary — the <em>exceptions</em></td><td>act on the complement</td></tr>
+</table>
+
+<p>Second row's habit: when a rule has an escape hatch at the border, flood the border to find who escapes, then sweep everything you did <em>not</em> mark. Cheaper than testing each region for whether it touches an edge.</p>
+
+<h2>DFS or BFS?</h2>
+
+<p>Either. This is a <strong>reachability</strong> question, not a distance one — you want the <em>set</em> of reached cells, and both traversals reach the same set. Use BFS if you want the flat loop and no recursion-depth risk on a large grid; use DFS if the recursive form reads better. Layers are irrelevant here (contrast <a href="./bfs-traversal.html">BFS as distance</a>, where they are the whole point).</p>
+
+</body>
+</html>
