@@ -27,6 +27,8 @@
   Source of the verbatim transpose definition used in L5: "Let $G^T$ denote the _transpose graph_ of $G$, obtained by reversing the edge directions in $G$." Use for: the reverse-graph vocabulary now, and Kosaraju later if a problem ever brushes SCCs. Verified 2026-09-17.
 - [Article: CP-Algorithms — Topological Sorting](https://cp-algorithms.com/graph/topological-sort.html)
   DFS-based topological sort; the one-line contradiction argument for why a cycle admits no order (quoted in L6). Does NOT cover Kahn's. Verified 2026-09-24.
+- [Article: CP-Algorithms — Checking a graph for acyclicity and finding a cycle](https://cp-algorithms.com/graph/finding-cycle.html)
+  Three-color DFS for directed cycles: "mark it gray (1) while entering and mark it black (2) on exit"; "If DFS moves to a gray vertex, then we have found a cycle"; O(M). Also notes the undirected version needs no gray/black split. Use for: the DFS alternative to Kahn's leftover check (named, not taught). Verified 2026-11-05.
 - [Tool: VisuAlgo — Graph Traversal (DFS/BFS)](https://visualgo.net/en/dfsbfs)
   Animated DFS/BFS plus topological sort (both DFS-based and Kahn's). Use for: watching a traversal before hand-tracing one. Verified 2026-08-14.
 - [Videos: NeetCode YouTube channel](https://www.youtube.com/@NeetCode)
