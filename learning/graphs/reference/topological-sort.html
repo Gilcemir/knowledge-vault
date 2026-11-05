@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference — Topological Sort</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1>Topological Sort — cheat sheet</h1>
+<p class="lesson-meta">Graphs track · reference · source lesson: <a href="../lessons/0011-topological-sort.html">L6</a></p>
+
+<h2>Definition</h2>
+
+<p>A <strong>topological order</strong> lists every vertex exactly once so that for every edge u&rarr;v, u comes before v. It exists <strong>iff the graph is a DAG</strong> (no directed cycle), per <a href="https://algs4.cs.princeton.edu/42digraph/">Sedgewick &amp; Wayne §4.2</a>. It's usually not unique.</p>
+
+<h2>Checking an order: every arrow points right</h2>
+
+<p>Lay the order out as a line and draw each edge on it. The order is topological iff <strong>no arrow points left</strong>. In-degrees can't decide this: they count arrows into a vertex but don't say where those arrows start. Below, 1 and 2 both have in-degree 1, yet only the edge says which one goes first.</p>
+
+<pre><code>edges [0,1] [1,2], order [0, 2, 1]
+
+     ┌─────────────┐      0→1 points right ✓
+     │             ▼
+    [0]    [2]    [1]
+            ▲      │
+            └──────┘      1→2 points LEFT ✗  → not topological</code></pre>
+
+<pre><code>def is_topological(n: int, edges: list[list[int]], order: list[int]) -> bool:
+    if sorted(order) != list(range(n)):   # each vertex exactly once; a set would hide [0, 0, 1]
+        return False
+    pos: dict[int, int] = {v: i for i, v in enumerate(order)}   # vertex -> position
+    return all(pos[u] < pos[v] for u, v in edges)              # every arrow points right</code></pre>
+
+<p>Cost: O(V log V) for the sort, then O(V) to build <code>pos</code> and O(E) for the edge check. Added after the L6 drill hand-in (2026-11-05).</p>
+
+<h2>Kahn's loop (queue-based)</h2>
+
+<pre><code>adj: list[list[int]] = [[] for _ in range(n)]
+indeg: list[int] = [0] * n
+for u, v in edges:              # u -> v, DIRECTED: one entry only
+    adj[u].append(v)
+    indeg[v] += 1
+
+q: deque[int] = deque(v for v in range(n) if indeg[v] == 0)
+order: list[int] = []
+while q:
+    u = q.popleft()
+    order.append(u)
+    for v in adj[u]:
+        indeg[v] -= 1           # one requirement met
+        if indeg[v] == 0:       # the LAST one: v is ready
+            q.append(v)</code></pre>
+
+<h2>Kahn vs your BFS</h2>
+
+<table>
+  <tr><th></th><th>BFS (L4)</th><th>Kahn</th></tr>
+  <tr><td>joins the queue on</td><td>first arrival (<code>not in seen</code>)</td><td>last arrival (<code>indeg == 0</code>)</td></tr>
+  <tr><td>seeds</td><td>given sources</td><td>all vertices with in-degree 0</td></tr>
+  <tr><td><code>seen</code></td><td>required</td><td>none; counts only go down and hit 0 once</td></tr>
+</table>
+
+<h2>On a cycle</h2>
+
+<table>
+  <tr><th>Symptom</th><th>Why</th></tr>
+  <tr><td>the queue runs dry early; no error, no infinite loop</td><td>on a cycle each vertex waits for the previous one, so no count reaches 0</td></tr>
+  <tr><td>left over = the cycle <strong>+ everything downstream</strong></td><td>a stuck predecessor never releases its successors</td></tr>
+</table>
+
+<h2>Cost</h2>
+
+<table>
+  <tr><th>Count</th><th>Why</th></tr>
+  <tr><td>pops ≤ V</td><td>a count hits 0 at most once</td></tr>
+  <tr><td>decrements = E (on a DAG)</td><td>a directed edge sits only in its tail's list, read once at the tail's pop</td></tr>
+  <tr><td><strong>time O(V + E), space O(V + E)</strong></td><td>adjacency list dominates the space; indeg, queue and order are O(V)</td></tr>
+</table>
+
+<h2>Two "reverse"s</h2>
+
+<table>
+  <tr><th>Name</th><th>What is reversed</th></tr>
+  <tr><td>transpose G<sup>T</sup> (L5)</td><td>every <strong>edge's direction</strong></td></tr>
+  <tr><td>reverse postorder (DFS route to a topo order)</td><td>a <strong>list</strong>: vertices in the order their DFS call finished; the edges are not touched</td></tr>
+</table>
+
+<h2>Stdlib</h2>
+
+<pre><code>from graphlib import TopologicalSorter, CycleError
+TopologicalSorter({"shoes": ("pants", "socks")}).static_order()
+# dict maps node -&gt; its PREDECESSORS (opposite of an adjacency list)
+# a cycle raises CycleError('nodes are in a cycle', [...])</code></pre>
+
+<h2>Glossary added by L6</h2>
+
+<table>
+  <tr><td><strong>predecessor / successor</strong></td><td>for u&rarr;v: u is v's predecessor, v is u's successor</td></tr>
+  <tr><td><strong>in-degree</strong></td><td>number of edges pointing into a vertex</td></tr>
+  <tr><td><strong>source</strong></td><td>a vertex with in-degree 0</td></tr>
+  <tr><td><strong>directed cycle</strong></td><td>a directed path of ≥ 1 edge whose first and last vertices coincide</td></tr>
+  <tr><td><strong>DAG</strong></td><td>directed acyclic graph: a digraph with no directed cycle</td></tr>
+  <tr><td><strong>topological order</strong></td><td>every vertex once, every edge pointing forward</td></tr>
+  <tr><td><strong>postorder</strong></td><td>vertices listed in the order their DFS call finishes</td></tr>
+</table>
+
+<p>See also: <a href="./bfs-traversal.html">BFS</a> · <a href="./reverse-the-question.html">Reverse the question</a> · <a href="./graph-representations.html">Graph representations</a>.</p>
+
+</body>
+</html>

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L6 — Topological Sort</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>L6 — Topological Sort</h1>
+<p class="lesson-meta">Graphs track · lesson 6 of the main line · ~30 min · 2026-09-24 · prereq: <a href="./0008-bfs-layers-are-distances.html">L4 — BFS: Layers Are Distances</a>, <a href="./0010-thinking-from-the-boundary-inward.html">L5 — Boundary Inward</a> (directed edges) · drill: <a href="./0012-topo-sort-drill.py"><code>0012-topo-sort-drill.py</code></a> · reference: <a href="../reference/topological-sort.html">Topological sort</a></p>
+
+<h2>The problem first — getting dressed</h2>
+
+<p>Six things to put on: socks, underwear, shirt, pants, shoes, belt. Five rules, each of the form "X before Y":</p>
+
+<ul>
+  <li>underwear before pants</li>
+  <li>pants before shoes &nbsp;·&nbsp; socks before shoes</li>
+  <li>pants before belt &nbsp;·&nbsp; shirt before belt</li>
+</ul>
+
+<blockquote>Give me one order to put all six on that breaks no rule.</blockquote>
+
+<p>Draw each rule as an arrow from X to Y. That is a <strong>directed graph</strong>: the one-way edges from L5, now with no grid underneath.</p>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 460 262" width="460" height="262" role="img" aria-label="Dressing graph. Top row: socks, underwear, shirt, each with in-degree 0. Middle: pants, in-degree 1, with an arrow from underwear. Bottom: shoes, in-degree 2, with arrows from socks and pants; belt, in-degree 2, with arrows from pants and shirt.">
+    <defs>
+      <marker id="a6" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#0f766e"/>
+      </marker>
+    </defs>
+    <g stroke="#0f766e" stroke-width="2" marker-end="url(#a6)">
+      <line x1="230" y1="58" x2="230" y2="110"/>
+      <line x1="84" y1="58" x2="124" y2="200"/>
+      <line x1="210" y1="148" x2="154" y2="201"/>
+      <line x1="250" y1="148" x2="306" y2="201"/>
+      <line x1="376" y1="58" x2="336" y2="200"/>
+    </g>
+    <g font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#1a1a1a">
+      <rect x="30" y="24" width="90" height="34" rx="7" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+      <rect x="185" y="24" width="90" height="34" rx="7" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+      <rect x="340" y="24" width="90" height="34" rx="7" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+      <rect x="185" y="114" width="90" height="34" rx="7" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+      <rect x="85" y="204" width="90" height="34" rx="7" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+      <rect x="285" y="204" width="90" height="34" rx="7" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+      <text x="75" y="46">socks</text>
+      <text x="230" y="46">underwear</text>
+      <text x="385" y="46">shirt</text>
+      <text x="230" y="136">pants</text>
+      <text x="130" y="226">shoes</text>
+      <text x="330" y="226">belt</text>
+    </g>
+    <g font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#8a6d00" text-anchor="middle">
+      <text x="75" y="17">in 0</text>
+      <text x="230" y="17">in 0</text>
+      <text x="385" y="17">in 0</text>
+      <text x="300" y="135">in 1</text>
+      <text x="130" y="254">in 2</text>
+      <text x="330" y="254">in 2</text>
+    </g>
+  </svg>
+</figure>
+
+<p>The nouns this lesson needs, each pointing at the picture:</p>
+
+<table>
+  <tr><th>Term</th><th>Meaning</th><th>In the picture</th></tr>
+  <tr><td><strong>predecessor</strong></td><td>for an edge u&rarr;v, u is a predecessor of v</td><td>pants and socks are shoes' predecessors</td></tr>
+  <tr><td><strong>successor</strong></td><td>for an edge u&rarr;v, v is a successor of u</td><td>shoes and belt are pants' successors</td></tr>
+  <tr><td><strong>in-degree</strong></td><td>the number of edges pointing <em>into</em> a vertex</td><td>the gold <em>in&nbsp;n</em> labels: shoes 2, pants 1, socks 0</td></tr>
+  <tr><td><strong>source</strong></td><td>a vertex with in-degree 0: nothing has to come before it</td><td>socks, underwear, shirt (shaded)</td></tr>
+  <tr><td><strong>topological order</strong></td><td>a list of every vertex where each edge points forward</td><td>what the question asks for</td></tr>
+</table>
+
+<p>The Python docs define the last one in exactly these terms:</p>
+
+<blockquote>"A topological order is a linear ordering of the vertices in a graph such that for every directed edge u -&gt; v from vertex u to vertex v, vertex u comes before vertex v in the ordering."<br>
+<span style="font-style: normal; font-size: 0.85rem;">— <a href="https://docs.python.org/3/library/graphlib.html"><code>graphlib</code>, Python docs</a> (verified 2026-09-24)</span></blockquote>
+
+<h2>Try your BFS first</h2>
+
+<p>You own a traversal that starts from a set of vertices: L4's multi-source BFS. The sources are the obvious seeds, since nothing has to come before them. Seed all three, run BFS, and write down vertices in the order they're popped. Seeds in the order socks, underwear, shirt:</p>
+
+<table>
+  <tr><th>Pop</th><th>Neighbours not yet in <code>seen</code></th><th>Queue after</th><th>Output so far</th></tr>
+  <tr><td>—</td><td>—</td><td>socks, underwear, shirt</td><td></td></tr>
+  <tr><td>socks</td><td>shoes</td><td>underwear, shirt, shoes</td><td>socks</td></tr>
+  <tr><td>underwear</td><td>pants</td><td>shirt, shoes, pants</td><td>socks, underwear</td></tr>
+  <tr><td>shirt</td><td>belt</td><td>shoes, pants, belt</td><td>… shirt</td></tr>
+  <tr><td>shoes</td><td>—</td><td>pants, belt</td><td>… shirt, <span class="bad">shoes</span></td></tr>
+  <tr><td>pants</td><td>shoes, belt already seen</td><td>belt</td><td>… shoes, <span class="bad">pants</span></td></tr>
+  <tr><td>belt</td><td>—</td><td>—</td><td>… pants, belt</td></tr>
+</table>
+
+<p>Output: socks, underwear, shirt, <strong>shoes, pants</strong>, belt. Shoes before pants breaks "pants before shoes".</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">What went wrong</span>
+  BFS queues a vertex on its <strong>first</strong> arrival. That was right for distance, where the first arrival <em>is</em> the shortest path. Here it's wrong: socks reached shoes first, and BFS let shoes in while pants still hadn't happened. Shoes needs <em>all</em> its predecessors done, so it has to wait for the <strong>last</strong> one.
+</div>
+
+<h2>The fix: count what's still missing</h2>
+
+<p>"Wait for the last arrival" needs a number per vertex: how many predecessors haven't been output yet. At the start that number is the in-degree. Every time a vertex is popped, each of its successors has one fewer thing to wait for. When a count reaches <strong>0</strong>, that vertex is ready and joins the queue.</p>
+
+<p>That is the whole algorithm, known as <strong>Kahn's algorithm</strong>. Sedgewick &amp; Wayne describe it in an exercise:</p>
+
+<blockquote>"Remove a source from the queue and label it. Decrement the entries in the indegree array corresponding to the destination vertex of each of the removed vertex's edges. If decrementing any entry causes it to become 0, insert the corresponding vertex onto the source queue."<br>
+<span style="font-style: normal; font-size: 0.85rem;">— Sedgewick &amp; Wayne, <a href="https://algs4.cs.princeton.edu/42digraph/"><em>Algorithms</em> §4.2</a>, Exercise 4.2.7, "queue-based topological sort" (verified 2026-09-24)</span></blockquote>
+
+<p>Compared with the BFS you already write, two lines change:</p>
+
+<table>
+  <tr><th></th><th>L4 BFS (your template)</th><th>Kahn</th></tr>
+  <tr><td>seeds</td><td>the given source(s)</td><td>every vertex with in-degree 0</td></tr>
+  <tr><td>per neighbour</td><td><code>if v not in seen:</code></td><td><code>indeg[v] -= 1</code><br><code>if indeg[v] == 0:</code></td></tr>
+  <tr><td>a vertex joins the queue on…</td><td>its <strong>first</strong> arrival</td><td>its <strong>last</strong> arrival</td></tr>
+  <tr><td><code>seen</code> set?</td><td>required</td><td>not needed: a count only goes down, so it hits 0 once</td></tr>
+  <tr><td>layer loop?</td><td>when distances are asked for</td><td>no; nothing here counts layers</td></tr>
+  <tr><td>output</td><td>distances</td><td>the pop order</td></tr>
+</table>
+
+<pre><code>q: deque[int] = deque(v for v in range(n) if indeg[v] == 0)
+order: list[int] = []
+while q:
+    u = q.popleft()
+    order.append(u)
+    for v in adj[u]:
+        indeg[v] -= 1          # one requirement of v is now met
+        if indeg[v] == 0:      # that was the last one
+            q.append(v)</code></pre>
+
+<p>You build <code>adj</code> and <code>indeg</code> in one pass over the edge list. One difference from L1: an edge u&rarr;v is <em>directed</em>, so it goes into <code>adj[u]</code> only. No mirror entry in <code>adj[v]</code>. Writing that pass is the first drill function.</p>
+
+<h2>Trace it — same seeds, by hand</h2>
+
+<table>
+  <tr><th>Pop</th><th>Decrements</th><th>Reached 0 → enqueue</th><th>Queue after</th></tr>
+  <tr><td>—</td><td colspan="2">start: pants 1 · shoes 2 · belt 2</td><td>socks, underwear, shirt</td></tr>
+  <tr><td>socks</td><td>shoes 2&rarr;1</td><td>—</td><td>underwear, shirt</td></tr>
+  <tr><td>underwear</td><td>pants 1&rarr;0</td><td class="good">pants</td><td>shirt, pants</td></tr>
+  <tr><td>shirt</td><td>belt 2&rarr;1</td><td>—</td><td>pants</td></tr>
+  <tr><td>pants</td><td>shoes 1&rarr;0 · belt 1&rarr;0</td><td class="good">shoes, belt</td><td>shoes, belt</td></tr>
+  <tr><td>shoes</td><td>—</td><td>—</td><td>belt</td></tr>
+  <tr><td>belt</td><td>—</td><td>—</td><td>—</td></tr>
+</table>
+
+<p>Output: socks, underwear, shirt, pants, shoes, belt. Check every rule: all five arrows point forward. ✓ Shoes had the same two arrivals as in the BFS run, socks first and pants second, but this time it waited for the second one.</p>
+
+<p>The answer isn't unique. Underwear, shirt, socks, pants, belt, shoes is valid too. Any order that satisfies the definition counts, which is why the drill checks the definition instead of comparing against one fixed list.</p>
+
+<h2>When no order exists</h2>
+
+<p>Someone adds a sixth rule: <strong>shoes before pants</strong>.</p>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 460 262" width="460" height="262" role="img" aria-label="The dressing graph plus a red arrow from shoes back to pants, forming a two-vertex cycle pants to shoes to pants. Pants and shoes now each have in-degree 2.">
+    <defs>
+      <marker id="a6b" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#0f766e"/>
+      </marker>
+      <marker id="a6r" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#b02a37"/>
+      </marker>
+    </defs>
+    <g stroke="#0f766e" stroke-width="2" marker-end="url(#a6b)">
+      <line x1="230" y1="58" x2="230" y2="110"/>
+      <line x1="84" y1="58" x2="124" y2="200"/>
+      <line x1="210" y1="148" x2="154" y2="201"/>
+      <line x1="250" y1="148" x2="306" y2="201"/>
+      <line x1="376" y1="58" x2="336" y2="200"/>
+    </g>
+    <path d="M 100 204 Q 110 128 181 126" fill="none" stroke="#b02a37" stroke-width="2.5" stroke-dasharray="6,4" marker-end="url(#a6r)"/>
+    <g font-family="-apple-system, Helvetica, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#1a1a1a">
+      <rect x="30" y="24" width="90" height="34" rx="7" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+      <rect x="185" y="24" width="90" height="34" rx="7" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+      <rect x="340" y="24" width="90" height="34" rx="7" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/>
+      <rect x="185" y="114" width="90" height="34" rx="7" fill="#fdeef0" stroke="#b02a37" stroke-width="2"/>
+      <rect x="85" y="204" width="90" height="34" rx="7" fill="#fdeef0" stroke="#b02a37" stroke-width="2"/>
+      <rect x="285" y="204" width="90" height="34" rx="7" fill="#fdfdfa" stroke="#0f766e" stroke-width="2"/>
+      <text x="75" y="46">socks</text>
+      <text x="230" y="46">underwear</text>
+      <text x="385" y="46">shirt</text>
+      <text x="230" y="136">pants</text>
+      <text x="130" y="226">shoes</text>
+      <text x="330" y="226">belt</text>
+    </g>
+    <g font-family="-apple-system, Helvetica, sans-serif" font-size="11" text-anchor="middle">
+      <text x="300" y="135" fill="#b02a37">in 2</text>
+      <text x="130" y="254" fill="#b02a37">in 2</text>
+      <text x="330" y="254" fill="#8a6d00">in 2</text>
+      <text x="62" y="140" fill="#b02a37">new rule</text>
+    </g>
+  </svg>
+</figure>
+
+<p>Pants must come before shoes and shoes before pants. Following the arrows, pants &rarr; shoes &rarr; pants gets you back where you started. That is a <strong>directed cycle</strong>:</p>
+
+<blockquote>"A directed cycle is a directed path (with at least one edge) whose first and last vertices are the same. A directed acyclic graph (or DAG) is a digraph with no directed cycles."<br>
+<span style="font-style: normal; font-size: 0.85rem;">— Sedgewick &amp; Wayne, <a href="https://algs4.cs.princeton.edu/42digraph/"><em>Algorithms</em> §4.2</a> (verified 2026-09-24)</span></blockquote>
+
+<p>No order can satisfy this. CP-Algorithms gives the one-line reason: on a cycle through a and b, "<em>a</em> needs to have a smaller index than <em>b</em> (since you can reach <em>b</em> from <em>a</em>) and also a bigger one (as you can reach <em>a</em> from <em>b</em>)" (<a href="https://cp-algorithms.com/graph/topological-sort.html">Topological Sorting</a>). And without a cycle, an order always exists:</p>
+
+<div class="callout key">
+  <span class="callout-title">The theorem</span>
+  "A digraph has a topological order if and only if it is a DAG." — <a href="https://algs4.cs.princeton.edu/42digraph/">Sedgewick &amp; Wayne §4.2</a>
+</div>
+
+<p>So what does Kahn's loop <em>do</em> on this graph? Trace it:</p>
+
+<table>
+  <tr><th>Pop</th><th>Decrements</th><th>Reached 0</th><th>Queue after</th></tr>
+  <tr><td>—</td><td colspan="2">start: pants 2 · shoes 2 · belt 2</td><td>socks, underwear, shirt</td></tr>
+  <tr><td>socks</td><td>shoes 2&rarr;1</td><td>—</td><td>underwear, shirt</td></tr>
+  <tr><td>underwear</td><td>pants 2&rarr;1</td><td>—</td><td>shirt</td></tr>
+  <tr><td>shirt</td><td>belt 2&rarr;1</td><td>—</td><td class="bad">empty</td></tr>
+</table>
+
+<p>The loop just stops. No error and no infinite loop. Three vertices were popped, and pants, shoes and belt are each left at count 1. Pants waits for shoes and shoes waits for pants, so neither can go first and neither count reaches 0.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">Look at the belt</span>
+  Belt is <em>not</em> on the cycle, and it's still stuck. Its predecessor pants never gets popped, so belt's last requirement is never met. The vertices left over are the cycle <em>plus everything downstream of it</em>. They aren't just the cycle.
+</div>
+
+<h2>What it cost</h2>
+
+<table>
+  <tr><th>Phase</th><th>Time</th><th>Space</th></tr>
+  <tr><td>build <code>adj</code> + <code>indeg</code> (one pass over the edges)</td><td>O(V + E)</td><td><code>adj</code> O(V + E), <code>indeg</code> O(V)</td></tr>
+  <tr><td>seed: scan <code>indeg</code> for zeros</td><td>O(V)</td><td>queue ≤ V</td></tr>
+  <tr><td>loop: pops</td><td>≤ V, since each vertex is queued at most once</td><td><code>order</code> O(V)</td></tr>
+  <tr><td>loop: decrements</td><td><strong>exactly E</strong> on a DAG, because each directed edge is stored once, in its tail's list</td><td>—</td></tr>
+  <tr><td><strong>total</strong></td><td><strong>O(V + E)</strong></td><td><strong>O(V + E)</strong></td></tr>
+</table>
+
+<p>Compare with L4, where the neighbour checks totalled 2E because an undirected edge sat in both endpoints' lists. Directed edges are stored once, so the count is E.</p>
+
+<h2>Two different "reverse"s — don't merge them</h2>
+
+<p>There's a second route to a topological order, and you'll see it in every other source: run DFS, record each vertex when its call <em>finishes</em>, then read that list backwards. That list is the <strong>postorder</strong>, and "Reverse postorder in a DAG is a topological sort" (<a href="https://algs4.cs.princeton.edu/42digraph/">Sedgewick &amp; Wayne §4.2</a>). You don't need it for the roadmap, since Kahn's does the same job. What you need is to keep its name apart from L5's:</p>
+
+<table>
+  <tr><th>Name</th><th>What gets reversed</th><th>Are the edges touched?</th></tr>
+  <tr><td>transpose G<sup>T</sup> (L5)</td><td>the direction of <strong>every edge</strong></td><td>yes, the neighbour condition is rewritten</td></tr>
+  <tr><td>reverse postorder</td><td>a <strong>list</strong> of vertices, in the order DFS finished them</td><td>no, the graph is left alone</td></tr>
+</table>
+
+<p>Before you say "reverse" out loud, name what is being reversed. In P7 you got stuck trying to invert "something". This is the same trap.</p>
+
+<h2>The stdlib already ships this</h2>
+
+<p><code>graphlib.TopologicalSorter</code> (3.9+). Here's its <code>done()</code> method, from <code>inspect.getsource</code> on 3.14:</p>
+
+<pre><code>for successor in nodeinfo.successors:
+    successor_info = n2i[successor]
+    successor_info.npredecessors -= 1
+    if successor_info.npredecessors == 0:
+        self._ready_nodes.append(successor)</code></pre>
+
+<p>That's your loop, with <code>npredecessors</code> as the in-degree. Note how its input is written, though:</p>
+
+<pre><code>&gt;&gt;&gt; from graphlib import TopologicalSorter
+&gt;&gt;&gt; g = {"pants": ("underwear",), "shoes": ("pants", "socks"), "belt": ("pants", "shirt")}
+&gt;&gt;&gt; list(TopologicalSorter(g).static_order())
+['underwear', 'socks', 'shirt', 'pants', 'shoes', 'belt']</code></pre>
+
+<p>Each key maps to its <strong>predecessors</strong>: "the values are iterables of all predecessors of that node in the graph". That's the opposite of an adjacency list, which maps each vertex to its successors. Same graph, arrows written from the other end. Add the shoes-before-pants rule and it raises <code>CycleError('nodes are in a cycle', ['pants', 'shoes', 'pants'])</code>.</p>
+
+<p>For the roadmap problems, write it yourself; that's the mission. In production code, use <code>graphlib</code>.</p>
+
+<h2>Check yourself</h2>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">Your BFS put shoes before pants. What went wrong, exactly?</p>
+  <button class="quiz-opt">The queue served shoes before its layer began</button>
+  <button class="quiz-opt">Shoes was queued after only one predecessor finished</button>
+  <button class="quiz-opt">The seen set let shoes enter twice over</button>
+  <button class="quiz-opt">Seeding three sources at once broke the order</button>
+  <p class="quiz-explain">BFS queues on the first arrival, and socks got there first. Shoes has two predecessors, and Kahn's count makes it wait for the second.</p>
+</div>
+
+<div class="quiz" data-answer="3">
+  <p class="quiz-q">On a DAG, how many times does <code>indeg[v] -= 1</code> run in total?</p>
+  <button class="quiz-opt">Twice per edge, once from either of its endpoints</button>
+  <button class="quiz-opt">Once per vertex, at the moment that vertex pops</button>
+  <button class="quiz-opt">Up to V times for every vertex, worst case</button>
+  <button class="quiz-opt">Once per edge, when the vertex it leaves pops</button>
+  <p class="quiz-explain">A directed edge u→v lives only in <code>adj[u]</code>, and <code>adj[u]</code> is read once, when u is popped. On a DAG every vertex is popped, so every edge is decremented exactly once: E.</p>
+</div>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">You add "shoes before pants". What does Kahn's loop do?</p>
+  <button class="quiz-opt">Stops early, with pants, shoes and belt never popped</button>
+  <button class="quiz-opt">Loops forever, since pants and shoes keep re-entering it</button>
+  <button class="quiz-opt">Raises an error the moment it meets the cycle</button>
+  <button class="quiz-opt">Pops all six, but pants and shoes come swapped</button>
+  <p class="quiz-explain">Counts only go down, and a vertex enters only at 0. On the cycle nobody reaches 0, so nothing new is queued and the queue runs dry. No error and no infinite loop.</p>
+</div>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">Why is belt never popped, even though it's on no cycle?</p>
+  <button class="quiz-opt">Its in-degree was the largest of all six items</button>
+  <button class="quiz-opt">It has no outgoing edges, so nothing releases it</button>
+  <button class="quiz-opt">One predecessor, pants, is stuck and never gets popped</button>
+  <button class="quiz-opt">Shirt, its other predecessor, was popped far too early</button>
+  <p class="quiz-explain">A vertex is released by its <em>incoming</em> edges. One of them comes from pants, which sits on the cycle and is never popped, so belt's count stops at 1. Being stuck spreads downstream from a cycle.</p>
+</div>
+
+<h2>Drill</h2>
+
+<p>Closed-book, like L4's. Close this page first.</p>
+
+<pre><code>python3.14 learning/graphs/lessons/0012-topo-sort-drill.py</code></pre>
+
+<p>Three functions (<code>in_degrees</code>, <code>is_topological</code>, <code>kahn_order</code>) and six knowledge cells. The drill's <code>kahn_order</code> is guaranteed an acyclic graph.</p>
+
+<h2>What I am deliberately not telling you</h2>
+
+<p>This lesson gave you the countdown, the order it produces, and what a cycle looks like from inside the loop. It did <em>not</em> assemble them into either problem.</p>
+
+<ul>
+  <li><strong>P8</strong> asks a yes/no question and <strong>P9</strong> asks for the order itself. You've seen what the loop leaves behind on a cycle. Writing the line that notices it is your part.</li>
+  <li>Every input format chooses which way its pairs point. The drill's <code>[u, v]</code> and <code>graphlib</code>'s dict point in opposite directions. Before you build anything, draw one example pair from the problem statement as an arrow.</li>
+</ul>
+
+<p>Hints on request, escalating, as always.</p>
+
+<h2>Read this</h2>
+
+<p><strong>Primary source:</strong> <a href="https://algs4.cs.princeton.edu/42digraph/">Sedgewick &amp; Wayne, <em>Algorithms</em> §4.2 — Directed Graphs</a>, the page you read for L5. Read the sections <em>Cycles and DAGs</em> and <em>Topological sort</em>, then Exercise 4.2.7 (the queue-based version you just learned). It covers the DFS route too, so you'll see both reversals side by side. Secondary: the <a href="https://docs.python.org/3/library/graphlib.html"><code>graphlib</code> docs</a>, especially <code>get_ready()</code> / <code>done()</code>, which expose Kahn's loop one step at a time.</p>
+
+<div class="ask-teacher">
+  If anything is unclear, ask, especially why belt gets stuck and which "reverse" is which. Those two are where this lesson's bugs hide.
+</div>
+
+<div class="lesson-nav">
+  <a href="./0010-thinking-from-the-boundary-inward.html">← L5 — Thinking From the Boundary Inward</a>
+  <a href="../reference/topological-sort.html">Reference: Topological Sort →</a>
+</div>
+
+</body>
+</html>

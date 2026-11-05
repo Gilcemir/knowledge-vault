@@ -15,15 +15,18 @@
 - [Article: CP-Algorithms — Disjoint Set Union](https://cp-algorithms.com/data_structures/disjoint_set_union.html)
   DSU with path compression and union by size/rank, O(α(n)) amortized, with implementations. Use for: the union-find lessons (Redundant Connection, Connected Components). Verified 2026-08-14.
 - [Docs: `graphlib` — Python official docs](https://docs.python.org/3/library/graphlib.html)
-  Stdlib `TopologicalSorter` (3.9+). Use for: the "the stdlib already ships this" moment after topo sort is earned by hand — same role `heapq`'s source played in the heap track.
+  Stdlib `TopologicalSorter` (3.9+). Use for: the "the stdlib already ships this" moment after topo sort is earned by hand — same role `heapq`'s source played in the heap track. Verified 2026-09-24: topological-order definition, predecessor-dict convention, CycleError quoted in L6; `done()` source read via `inspect.getsource` on 3.14.
 - [Docs: `copy` — Python official docs](https://docs.python.org/3/library/copy.html)
   Verbatim definitions of shallow vs deep copy; `deepcopy`'s `memo` dictionary — the stdlib's own old→new map and why recursive objects need it. Use for: L3 (graph copies & identity) primary source, "the stdlib already ships this" moment. Verified 2026-08-20 (memo-dictionary passage quoted).
 - [Docs: `collections.deque` — Python official docs](https://docs.python.org/3/library/collections.html#collections.deque)
   O(1) `popleft` — the BFS queue. Use for: why `list.pop(0)` is the wrong queue. Verified 2026-08-25 (append/popleft contracts and the list `pop(0)`/`insert(0, v)` O(n) passage quoted verbatim in L4).
 - [Book: Sedgewick & Wayne, _Algorithms_ 4ed — §4.2 Directed Graphs](https://algs4.cs.princeton.edu/42digraph/)
   Digraphs, reachability, and **multiple-source reachability** — "Given a digraph and a _set_ of source vertices, is there a directed path from _any_ vertex in the set to v?" (quoted verbatim in L5). Use for: the formal name and framing behind boundary/multi-source seeding; spoils none of the 13 roadmap problems. Verified 2026-09-17.
+  Also L6's primary source: DAG and directed-cycle definitions, "A digraph has a topological order if and only if it is a DAG.", "Reverse postorder in a DAG is a topological sort.", and Exercise 4.2.7 (queue-based topological sort = Kahn's) — all quoted verbatim in L6. Verified 2026-09-24.
 - [Article: CP-Algorithms — Strongly Connected Components](https://cp-algorithms.com/graph/strongly-connected-components.html)
   Source of the verbatim transpose definition used in L5: "Let $G^T$ denote the _transpose graph_ of $G$, obtained by reversing the edge directions in $G$." Use for: the reverse-graph vocabulary now, and Kosaraju later if a problem ever brushes SCCs. Verified 2026-09-17.
+- [Article: CP-Algorithms — Topological Sorting](https://cp-algorithms.com/graph/topological-sort.html)
+  DFS-based topological sort; the one-line contradiction argument for why a cycle admits no order (quoted in L6). Does NOT cover Kahn's. Verified 2026-09-24.
 - [Tool: VisuAlgo — Graph Traversal (DFS/BFS)](https://visualgo.net/en/dfsbfs)
   Animated DFS/BFS plus topological sort (both DFS-based and Kahn's). Use for: watching a traversal before hand-tracing one. Verified 2026-08-14.
 - [Videos: NeetCode YouTube channel](https://www.youtube.com/@NeetCode)
