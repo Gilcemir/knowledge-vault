@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L7 — Union-Find</title>
+<link rel="stylesheet" href="../assets/course.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+
+<h1>L7 — Union-Find</h1>
+<p class="lesson-meta">Graphs track · lesson 7 of the main line · ~30 min · 2026-11-05 · prereq: <a href="./0005-dfs-with-cycles.html">L2 — DFS with Cycles</a> (components), <a href="./0008-bfs-layers-are-distances.html">L4 — BFS: Layers Are Distances</a> · drill: <a href="./0014-union-find-drill.py"><code>0014-union-find-drill.py</code></a> · reference: <a href="../reference/union-find.html">Union-find</a></p>
+
+<h2>The problem first — cables arriving one at a time</h2>
+
+<p>Six computers, numbered 0 to 5, and no cables yet. Events arrive one at a time, of two kinds:</p>
+
+<ul>
+  <li><strong>connect a b</strong>: a cable is plugged in between a and b. Cables work both ways.</li>
+  <li><strong>ask a b</strong>: can a reach b right now, through any chain of cables?</li>
+</ul>
+
+<p>This stream:</p>
+
+<pre><code>connect 0 1     connect 2 3     ask 0 3     connect 1 3
+ask 0 2         connect 4 5     ask 5 0</code></pre>
+
+<blockquote>Answer every ask at the moment it arrives, before the next event is read.</blockquote>
+
+<p>Sedgewick &amp; Wayne call this the <strong>dynamic connectivity</strong> problem: "The input is a sequence of pairs of integers, where each integer represents an object of some type" (<a href="https://algs4.cs.princeton.edu/15uf/"><em>Algorithms</em> §1.5</a>, verified 2026-11-05). Cables are only ever added, never removed.</p>
+
+<h2>Try your BFS first</h2>
+
+<p>You already own the tool for "can a reach b?": L4's BFS from a, stopping when b is popped. For each ask, run BFS on the cables plugged in so far. The answers come out right: no, yes, no.</p>
+
+<p>Now count. One BFS may touch every vertex and every cable, which is O(V + E). The graph changes after every connect, so you can't reuse an earlier BFS, and each ask starts from scratch:</p>
+
+<table>
+  <tr><th>computers V</th><th>cables E</th><th>asks Q</th><th>BFS work ≈ Q · (V + E)</th></tr>
+  <tr><td>6</td><td>4</td><td>3</td><td>≈ 30 steps</td></tr>
+  <tr><td>100 000</td><td>100 000</td><td>100 000</td><td class="bad">≈ 20 000 000 000 steps</td></tr>
+</table>
+
+<div class="callout gotcha">
+  <span class="callout-title">What went wrong</span>
+  Every ask asks "is there a path?" all over again. But the answer only changes when a connect <em>merges two groups</em>, and groups only ever merge, never split. So keep the groups themselves, and an ask becomes "are a and b in the same group?"
+</div>
+
+<p>"Group" here is L2's <strong>component</strong>: a set of vertices that can all reach each other. Groups work because, as algs4 puts it, "is connected to" is symmetric ("If p is connected to q, then q is connected to p"), transitive ("If p is connected to q and q is connected to r, then p is connected to r") and reflexive ("p is connected to p"). That's also why this lesson's tool doesn't apply to L6's one-way arrows: there, "a reaches b" says nothing about "b reaches a".</p>
+
+<h2>The fix: every group keeps a root</h2>
+
+<p>Each vertex stores one number, its <strong>parent</strong>: another vertex in the same group. Follow parents upward and you end at a vertex that is its own parent, the group's <strong>root</strong>. Two vertices are in the same group exactly when they reach the same root.</p>
+
+<table>
+  <tr><th>Term</th><th>Meaning</th><th>In the picture below</th></tr>
+  <tr><td><strong>parent</strong></td><td><code>parent[x]</code>: the vertex x points to</td><td>0's parent is 1; 1's parent is 3</td></tr>
+  <tr><td><strong>root</strong> (or representative)</td><td>a vertex with <code>parent[r] == r</code>; one per group</td><td>3 and 5 (shaded)</td></tr>
+  <tr><td><strong>tree</strong>, <strong>forest</strong></td><td>one group drawn with its parent arrows is a tree; all groups together are a forest</td><td>two trees</td></tr>
+  <tr><td><strong>depth</strong></td><td>how many parent links x follows to reach its root</td><td>0 has depth 2; 4 has depth 1</td></tr>
+  <tr><td><strong>find(x)</strong></td><td>follow parents from x to the root; return the root</td><td>find(0) = 3</td></tr>
+  <tr><td><strong>union(a, b)</strong></td><td>merge a's group with b's: give one root the other root as its parent</td><td>how the picture was built</td></tr>
+</table>
+
+<figure style="text-align: center; margin: 1.5rem 0;">
+  <svg viewBox="0 0 460 230" width="460" height="230" role="img" aria-label="A forest of two trees. Left tree: root 3, with 1 and 2 pointing up to 3, and 0 pointing up to 1. Right tree: root 5, with 4 pointing up to 5. Arrows go from child to parent.">
+    <defs>
+      <marker id="a7" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#0f766e"/>
+      </marker>
+    </defs>
+    <g stroke="#0f766e" stroke-width="2" marker-end="url(#a7)">
+      <line x1="101" y1="101" x2="138" y2="56"/>
+      <line x1="199" y1="101" x2="162" y2="56"/>
+      <line x1="90" y1="172" x2="90" y2="135"/>
+      <line x1="360" y1="97" x2="360" y2="60"/>
+    </g>
+    <g stroke="#0f766e" stroke-width="2">
+      <circle cx="150" cy="40" r="18" fill="#e6f4f1"/>
+      <circle cx="90" cy="115" r="18" fill="#fdfdfa"/>
+      <circle cx="210" cy="115" r="18" fill="#fdfdfa"/>
+      <circle cx="90" cy="190" r="18" fill="#fdfdfa"/>
+      <circle cx="360" cy="40" r="18" fill="#e6f4f1"/>
+      <circle cx="360" cy="115" r="18" fill="#fdfdfa"/>
+    </g>
+    <g font-family="-apple-system, Helvetica, sans-serif" font-size="15" font-weight="700" text-anchor="middle" fill="#1a1a1a">
+      <text x="150" y="45">3</text>
+      <text x="90" y="120">1</text>
+      <text x="210" y="120">2</text>
+      <text x="90" y="195">0</text>
+      <text x="360" y="45">5</text>
+      <text x="360" y="120">4</text>
+    </g>
+    <g font-family="-apple-system, Helvetica, sans-serif" font-size="11" fill="#8a6d00" text-anchor="start">
+      <text x="174" y="44">root</text>
+      <text x="384" y="44">root</text>
+    </g>
+    <text x="230" y="224" font-family="SF Mono, Menlo, monospace" font-size="12" text-anchor="middle" fill="#555">parent = [1, 3, 3, 3, 5, 5]</text>
+  </svg>
+</figure>
+
+<p>The first version, with no tricks:</p>
+
+<pre><code>parent: list[int] = list(range(n))   # start: everyone is their own root
+
+def find(x: int) -> int:
+    while parent[x] != x:            # climb until a vertex is its own parent
+        x = parent[x]
+    return x
+
+def union(a: int, b: int) -> None:
+    parent[find(a)] = find(b)        # a's ROOT now hangs under b's ROOT
+
+def connected(a: int, b: int) -> bool:
+    return find(a) == find(b)</code></pre>
+
+<p>union links the two <em>roots</em>. If it wrote <code>parent[a] = b</code> instead, a would leave its old group behind, and everything still hanging below a's old root would be cut off from a.</p>
+
+<h2>Trace it — the stream, by hand</h2>
+
+<table>
+  <tr><th>Event</th><th>finds (links followed)</th><th><code>parent</code> after</th><th>Answer</th></tr>
+  <tr><td>start</td><td>—</td><td>[0, 1, 2, 3, 4, 5]</td><td></td></tr>
+  <tr><td>connect 0 1</td><td>find(0) = 0 · find(1) = 1</td><td>[<strong>1</strong>, 1, 2, 3, 4, 5]</td><td></td></tr>
+  <tr><td>connect 2 3</td><td>find(2) = 2 · find(3) = 3</td><td>[1, 1, <strong>3</strong>, 3, 4, 5]</td><td></td></tr>
+  <tr><td>ask 0 3</td><td>find(0): 0→1 = 1 · find(3) = 3</td><td>unchanged</td><td class="bad">no (1 ≠ 3)</td></tr>
+  <tr><td>connect 1 3</td><td>find(1) = 1 · find(3) = 3</td><td>[1, <strong>3</strong>, 3, 3, 4, 5]</td><td></td></tr>
+  <tr><td>ask 0 2</td><td>find(0): 0→1→3 = 3 · find(2): 2→3 = 3</td><td>unchanged</td><td class="good">yes (3 = 3)</td></tr>
+  <tr><td>connect 4 5</td><td>find(4) = 4 · find(5) = 5</td><td>[1, 3, 3, 3, <strong>5</strong>, 5]</td><td></td></tr>
+  <tr><td>ask 5 0</td><td>find(5) = 5 · find(0): 0→1→3 = 3</td><td>unchanged</td><td class="bad">no (5 ≠ 3)</td></tr>
+</table>
+
+<p>The last row is the picture above. Each connect wrote <strong>one</strong> number. No ask walked the whole graph, only the path from a vertex up to its root.</p>
+
+<h2>The failure: a chain</h2>
+
+<p>The same code, a different stream: connect 0 1, connect 0 2, connect 0 3, … (0 with every other vertex in turn).</p>
+
+<table>
+  <tr><th>Event</th><th>find(0) follows</th><th><code>parent</code> after (n = 5)</th></tr>
+  <tr><td>connect 0 1</td><td>0 links</td><td>[1, 1, 2, 3, 4]</td></tr>
+  <tr><td>connect 0 2</td><td>1 link (0→1)</td><td>[1, 2, 2, 3, 4]</td></tr>
+  <tr><td>connect 0 3</td><td>2 links (0→1→2)</td><td>[1, 2, 3, 3, 4]</td></tr>
+  <tr><td>connect 0 4</td><td>3 links</td><td>[1, 2, 3, 4, 4]</td></tr>
+</table>
+
+<pre><code>0 → 1 → 2 → 3 → 4          one tree, and it's a chain</code></pre>
+
+<p>Each connect hung the <em>whole</em> group under a single new vertex, so the group got one level deeper every time. connect 0 k follows k − 1 links, which adds up to about n²/2. At n = 100 000 that's ≈ 5 000 000 000 steps, no better than BFS. CP-Algorithms names the failure: "the trees degenerate into long chains. In that case each call <code>find_set(v)</code> can take O(n) time" (<a href="https://cp-algorithms.com/data_structures/disjoint_set_union.html">Disjoint Set Union</a>, verified 2026-11-05).</p>
+
+<h2>Fix 1: union by size</h2>
+
+<p>The chain grew because the big group kept going <em>under</em> the small one. Flip it: keep a <code>size</code> per root, and always hang the smaller tree under the bigger root, "we keep track of the size of each tree and always connect the smaller tree to the larger" (<a href="https://algs4.cs.princeton.edu/15uf/">algs4 §1.5</a>).</p>
+
+<pre><code>def union(a: int, b: int) -> None:
+    ra, rb = find(a), find(b)
+    if ra == rb:
+        return                     # one group already; merging would double-count size
+    if size[ra] &lt; size[rb]:
+        ra, rb = rb, ra            # make ra the bigger root
+    parent[rb] = ra                # the smaller tree hangs under the bigger root
+    size[ra] += size[rb]           # only the new root's size is updated</code></pre>
+
+<p>Same chain stream, now with this union:</p>
+
+<pre><code>naive:            0 → 1 → 2 → 3 → 4         find(0) follows 4 links
+union by size:    1 → 0   2 → 0   3 → 0   4 → 0    every find follows at most 1</code></pre>
+
+<p>That stream happened to be friendly, but the guarantee holds for every stream: "The depth of any node in a forest built by weighted quick-union for n sites is at most lg n" (<a href="https://algs4.cs.princeton.edu/15uf/">algs4 §1.5</a>). The reason fits in one line. A vertex gets one level deeper only when its tree is hung under a tree at least as big, so the group it lives in at least doubles. A group of 1 can double only lg n times before it holds all n vertices. At n = 100 000, lg n ≈ 17.</p>
+
+<div class="callout gotcha">
+  <span class="callout-title">Sizes live at roots</span>
+  The last line updates <code>size</code> at the new root only. Once a root gets a parent, its own <code>size</code> entry is never touched again, so it goes stale. That's why union compares <code>size[ra]</code> and <code>size[rb]</code>, the roots, and never <code>size[a]</code> and <code>size[b]</code>.
+</div>
+
+<h2>Fix 2: path compression</h2>
+
+<p>Every find climbs to the root and then forgets what it learned. The next find from the same vertex climbs the same links again. "Ideally, we would like every node to link directly to the root of its tree" (<a href="https://algs4.cs.princeton.edu/15uf/">algs4 §1.5</a>). So on the way back down, point every vertex you passed straight at the root:</p>
+
+<pre><code>def find(x: int) -> int:
+    if parent[x] != x:
+        parent[x] = find(parent[x])    # whatever root came back, x now points at it
+    return parent[x]</code></pre>
+
+<p>That's CP-Algorithms' one-liner <code>return parent[v] = find_set(parent[v]);</code> written in Python. Trace it on the chain from the failure section, <code>parent = [1, 2, 3, 4, 4]</code>. Going up, find(0) calls find(1), which calls find(2), find(3), find(4). Vertex 4 is the root, so 4 comes back. Then each call writes it:</p>
+
+<table>
+  <tr><th>Returning from</th><th>Writes</th><th><code>parent</code> after</th></tr>
+  <tr><td>find(4)</td><td>— (root)</td><td>[1, 2, 3, 4, 4]</td></tr>
+  <tr><td>find(3)</td><td>parent[3] = 4</td><td>[1, 2, 3, 4, 4]</td></tr>
+  <tr><td>find(2)</td><td>parent[2] = 4</td><td>[1, 2, <strong>4</strong>, 4, 4]</td></tr>
+  <tr><td>find(1)</td><td>parent[1] = 4</td><td>[1, <strong>4</strong>, 4, 4, 4]</td></tr>
+  <tr><td>find(0)</td><td>parent[0] = 4</td><td>[<strong>4</strong>, 4, 4, 4, 4]</td></tr>
+</table>
+
+<p>One find paid for 4 links. Every later find in that group pays 1.</p>
+
+<div class="callout key">
+  <span class="callout-title">Is the recursion safe?</span>
+  The recursion is as deep as the path, and union by size caps every path at lg n (≈ 17 at 100 000), far below Python's default limit of 1000. Without union by size, the chain stream recurses 100 000 deep and crashes, like L6's recursion test did. The two fixes protect each other.
+</div>
+
+<h2>All together</h2>
+
+<pre><code>class UnionFind:
+    def __init__(self, n: int) -> None:
+        self.parent: list[int] = list(range(n))    # everyone is their own root
+        self.size: list[int] = [1] * n             # trusted at roots only
+
+    def find(self, x: int) -> int:
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])   # path compression
+        return self.parent[x]
+
+    def union(self, a: int, b: int) -> None:
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return
+        if self.size[ra] &lt; self.size[rb]:
+            ra, rb = rb, ra                        # union by size
+        self.parent[rb] = ra
+        self.size[ra] += self.size[rb]
+
+    def connected(self, a: int, b: int) -> bool:
+        return self.find(a) == self.find(b)</code></pre>
+
+<p>Python's standard library has no union-find. You write these lines each time.</p>
+
+<h2>What it cost</h2>
+
+<p>One new word first. <strong>Amortized</strong> cost means the cost averaged over a long sequence of operations: one particular find can still be slow, but the total over m operations stays below m times the bound.</p>
+
+<table>
+  <tr><th>Version</th><th>one find (worst)</th><th>m operations</th></tr>
+  <tr><td>BFS per ask (no union-find)</td><td>O(V + E) per ask</td><td>O(m · (V + E))</td></tr>
+  <tr><td>parent links, naive</td><td>O(n), the chain</td><td class="bad">O(m · n)</td></tr>
+  <tr><td>+ union by size</td><td>O(log n)</td><td>O(m log n)</td></tr>
+  <tr><td>+ path compression</td><td>amortized O(α(n))</td><td class="good">O(m · α(n)), effectively O(m)</td></tr>
+</table>
+
+<p>α is the inverse Ackermann function, "which grows very slowly … it doesn't exceed 4 for all reasonable n (approximately n &lt; 10<sup>600</sup>)" (<a href="https://cp-algorithms.com/data_structures/disjoint_set_union.html">CP-Algorithms</a>). Treat it as a constant. <strong>Space:</strong> <code>parent</code> and <code>size</code>, O(n). No adjacency list is ever built, because each cable is used once, when it arrives, and then thrown away.</p>
+
+<h2>Check yourself</h2>
+
+<div class="quiz" data-answer="2">
+  <p class="quiz-q">Why does a fresh BFS per ask get too slow?</p>
+  <button class="quiz-opt">BFS breaks down on graphs whose cables form cycles</button>
+  <button class="quiz-opt">Each ask must sort every cable seen so far</button>
+  <button class="quiz-opt">Each ask may re-walk every vertex and every cable</button>
+  <button class="quiz-opt">The queue keeps growing as more cables keep arriving</button>
+  <p class="quiz-explain">BFS handles cycles fine (L2's visited set). The problem is repetition: the graph changes between asks, so each ask pays O(V + E) again from scratch.</p>
+</div>
+
+<div class="quiz" data-answer="0">
+  <p class="quiz-q">union(a, b) has found ra and rb, with different sizes. Which link is written?</p>
+  <button class="quiz-opt">The smaller root's parent becomes the bigger root</button>
+  <button class="quiz-opt">Vertex a's parent becomes vertex b, as given</button>
+  <button class="quiz-opt">The bigger root's parent becomes the smaller root</button>
+  <button class="quiz-opt">Every vertex in both trees points at ra</button>
+  <p class="quiz-explain">Roots are linked, never a and b themselves, and the smaller tree goes under. Hanging the bigger one under the smaller is what built the chain.</p>
+</div>
+
+<div class="quiz" data-answer="3">
+  <p class="quiz-q">On the chain 0→1→2→3→4, right after a compressing find(0), what holds?</p>
+  <button class="quiz-opt">Vertex 4 now points back down at 0</button>
+  <button class="quiz-opt">Only vertex 0 points straight at the root</button>
+  <button class="quiz-opt">The chain is unchanged; find only reads parents</button>
+  <button class="quiz-opt">Vertices 0, 1, 2, 3 all point at 4</button>
+  <p class="quiz-explain">Every call on the way back writes the root into its own vertex, so the whole path gets compressed, not just the starting vertex.</p>
+</div>
+
+<div class="quiz" data-answer="1">
+  <p class="quiz-q">Why compare size[ra] with size[rb], and not size[a] with size[b]?</p>
+  <button class="quiz-opt">Roots always hold the smallest size in their tree</button>
+  <button class="quiz-opt">A size is kept current only at a root</button>
+  <button class="quiz-opt">Comparing a and b directly would raise an IndexError</button>
+  <button class="quiz-opt">Sizes of non-roots are always zero after a union</button>
+  <p class="quiz-explain">union adds to the new root's size only. A vertex that was once a root keeps its old, stale size forever, and a vertex that never was one keeps 1.</p>
+</div>
+
+<h2>Drill</h2>
+
+<p>Closed-book, like L6's. Close this page first.</p>
+
+<pre><code>python3.14 learning/graphs/lessons/0014-union-find-drill.py</code></pre>
+
+<p>One class (<code>UnionFind</code>: <code>__init__</code>, <code>find</code>, <code>union</code>, <code>connected</code>) and four knowledge cells. Nine function tests, including a 100 000-vertex run of the chain stream. If a red stays red after one hint, ask, and you'll get the fix.</p>
+
+<h2>What I am deliberately not telling you</h2>
+
+<p>This lesson gave you the structure, the two fixes, and why each matters. It did <em>not</em> point it at any of the next three problems.</p>
+
+<ul>
+  <li><strong>P10</strong> (Graph Valid Tree) and <strong>P11</strong> (Number of Connected Components) are premium on LeetCode, so solve them on neetcode.io. <strong>P12</strong> is Redundant Connection (LC 684).</li>
+  <li>All three feed an edge list through union. Each one asks something different about what happens while those unions run. The lesson's union returns <code>None</code>, so it throws that information away. Deciding what to keep, and what it means for each problem, is your part.</li>
+</ul>
+
+<p>Hints on request, escalating, as always.</p>
+
+<h2>Read this</h2>
+
+<p><strong>Primary source:</strong> <a href="https://algs4.cs.princeton.edu/15uf/">Sedgewick &amp; Wayne, <em>Algorithms</em> §1.5 — Case Study: Union-Find</a>. Read <em>Dynamic connectivity</em>, then <em>Quick-union</em> and <em>Weighted quick-union</em>. Its "id[]" is this lesson's <code>parent</code>, and its "sites" are our vertices. It covers path compression too. Secondary: <a href="https://cp-algorithms.com/data_structures/disjoint_set_union.html">CP-Algorithms — Disjoint Set Union</a> for the α(n) result. To watch it run, try <a href="https://visualgo.net/en/ufds">VisuAlgo — Union-Find DS</a>. It uses union by <em>rank</em> (tree height) instead of size, which is the same idea with a different measure.</p>
+
+<div class="ask-teacher">
+  If anything is unclear, ask, especially why sizes are trusted only at roots and how the recursive find rewrites the path on its way back. Those two are where this drill's bugs hide.
+</div>
+
+<div class="lesson-nav">
+  <a href="./0011-topological-sort.html">← L6 — Topological Sort</a>
+  <a href="../reference/union-find.html">Reference: Union-Find →</a>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference — Union-Find</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1>Union-Find — cheat sheet</h1>
+<p class="lesson-meta">Graphs track · reference · source lesson: <a href="../lessons/0013-union-find.html">L7</a></p>
+
+<h2>When</h2>
+
+<p>Undirected cables arrive over time, groups only merge (never split), and you keep being asked "same group?". A fresh BFS per ask costs O(V + E) each time. Union-find answers in effectively O(1). It doesn't fit one-way edges: directed reachability isn't symmetric, so there are no groups to keep.</p>
+
+<h2>The structure</h2>
+
+<pre><code>class UnionFind:
+    def __init__(self, n: int) -> None:
+        self.parent: list[int] = list(range(n))    # everyone is their own root
+        self.size: list[int] = [1] * n             # trusted at roots only
+
+    def find(self, x: int) -> int:
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])   # path compression
+        return self.parent[x]
+
+    def union(self, a: int, b: int) -> None:
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return                                 # already one group
+        if self.size[ra] &lt; self.size[rb]:
+            ra, rb = rb, ra                        # union by size: ra is the bigger root
+        self.parent[rb] = ra
+        self.size[ra] += self.size[rb]
+
+    def connected(self, a: int, b: int) -> bool:
+        return self.find(a) == self.find(b)</code></pre>
+
+<h2>The two fixes</h2>
+
+<table>
+  <tr><th>Fix</th><th>What it does</th><th>Without it</th></tr>
+  <tr><td><strong>union by size</strong></td><td>the smaller tree hangs under the bigger root, so depth ≤ lg n (≈ 17 at 100 000)</td><td>connect 0 with 1, 2, 3, … builds the chain 0→1→2→…, so find is O(n) and the stream costs ≈ n²/2</td></tr>
+  <tr><td><strong>path compression</strong></td><td>after find(x), every vertex on the path points straight at the root</td><td>every find re-climbs the same links</td></tr>
+</table>
+
+<p>Compressing find(0) on <code>[1, 2, 3, 4, 4]</code> (the chain 0→1→2→3→4) gives <code>[4, 4, 4, 4, 4]</code>. The recursive find is safe because union by size keeps the recursion ≤ lg n deep. Without union by size, a 100 000 chain blows Python's limit of 1000.</p>
+
+<h2>Gotchas</h2>
+
+<table>
+  <tr><th>Bug</th><th>Why it's wrong</th></tr>
+  <tr><td><code>parent[a] = b</code></td><td>moves a alone; link the <strong>roots</strong>, <code>parent[rb] = ra</code></td></tr>
+  <tr><td><code>size[a] &lt; size[b]</code></td><td>sizes go stale off-root; compare <code>size[ra]</code> and <code>size[rb]</code></td></tr>
+  <tr><td>no <code>ra == rb</code> guard</td><td><code>size[ra] += size[ra]</code> doubles the group's size</td></tr>
+  <tr><td>compress only x</td><td>the rest of the path stays long; every call on the way back must write the root</td></tr>
+</table>
+
+<h2>Cost</h2>
+
+<table>
+  <tr><th>Version</th><th>one find</th><th>m operations</th></tr>
+  <tr><td>naive parent links</td><td>O(n) worst</td><td>O(m · n)</td></tr>
+  <tr><td>+ union by size</td><td>O(log n)</td><td>O(m log n)</td></tr>
+  <tr><td>+ path compression</td><td>amortized O(α(n))</td><td>O(m · α(n)), with α(n) ≤ 4 for n &lt; 10<sup>600</sup></td></tr>
+  <tr><td colspan="3"><strong>space O(n)</strong>: <code>parent</code> + <code>size</code>, and no adjacency list</td></tr>
+</table>
+
+<p>Sources: <a href="https://algs4.cs.princeton.edu/15uf/">algs4 §1.5</a> (weighted quick-union, depth ≤ lg n), <a href="https://cp-algorithms.com/data_structures/disjoint_set_union.html">CP-Algorithms DSU</a> (α(n)). Stdlib: none.</p>
+
+<h2>Glossary added by L7</h2>
+
+<table>
+  <tr><td><strong>parent</strong></td><td><code>parent[x]</code>: the vertex x points to, in its own group</td></tr>
+  <tr><td><strong>root</strong> / representative</td><td>the vertex with <code>parent[r] == r</code>; one per group</td></tr>
+  <tr><td><strong>tree / forest</strong></td><td>one group drawn with its parent arrows / all groups together</td></tr>
+  <tr><td><strong>depth</strong></td><td>parent links from x to its root</td></tr>
+  <tr><td><strong>find / union</strong></td><td>climb to the root / link one root under the other</td></tr>
+  <tr><td><strong>dynamic connectivity</strong></td><td>answering "same group?" while edges keep arriving</td></tr>
+  <tr><td><strong>amortized</strong></td><td>cost averaged over a long sequence of operations; one call can still be slow</td></tr>
+  <tr><td><strong>α(n)</strong></td><td>inverse Ackermann; ≤ 4 for any practical n</td></tr>
+</table>
+
+<p>See also: <a href="./dfs-traversal.html">DFS (components)</a> · <a href="./bfs-traversal.html">BFS</a> · <a href="./topological-sort.html">Topological sort</a>.</p>
+
+</body>
+</html>

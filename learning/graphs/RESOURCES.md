@@ -14,6 +14,9 @@
   DFS, full-DFS/full-BFS, topological sort, cycle detection. Use for: the same lecture series the heap track leaned on. Verified 2026-08-14.
 - [Article: CP-Algorithms — Disjoint Set Union](https://cp-algorithms.com/data_structures/disjoint_set_union.html)
   DSU with path compression and union by size/rank, O(α(n)) amortized, with implementations. Use for: the union-find lessons (Redundant Connection, Connected Components). Verified 2026-08-14.
+  Re-verified 2026-11-05 for L7: quoted the long-chains/O(n) failure and the α(n) line, "it doesn't exceed 4 for all reasonable n (approximately n < 10^600)"; path-compression one-liner `return parent[v] = find_set(parent[v]);`.
+- [Book: Sedgewick & Wayne, _Algorithms_ 4ed — §1.5 Case Study: Union-Find](https://algs4.cs.princeton.edu/15uf/)
+  Dynamic connectivity, equivalence-relation framing, quick-union, weighted quick-union ("always connect the smaller tree to the larger"; "The depth of any node … is at most lg n"), path compression, inverse-Ackermann bound in the Creative Problems. Use for: L7's primary source. Its `id[]` = our `parent`. The API table is an image, so don't quote method descriptions from it. Verified 2026-11-05.
 - [Docs: `graphlib` — Python official docs](https://docs.python.org/3/library/graphlib.html)
   Stdlib `TopologicalSorter` (3.9+). Use for: the "the stdlib already ships this" moment after topo sort is earned by hand — same role `heapq`'s source played in the heap track. Verified 2026-09-24: topological-order definition, predecessor-dict convention, CycleError quoted in L6; `done()` source read via `inspect.getsource` on 3.14.
 - [Docs: `copy` — Python official docs](https://docs.python.org/3/library/copy.html)
@@ -31,6 +34,8 @@
   Three-color DFS for directed cycles: "mark it gray (1) while entering and mark it black (2) on exit"; "If DFS moves to a gray vertex, then we have found a cycle"; O(M). Also notes the undirected version needs no gray/black split. Use for: the DFS alternative to Kahn's leftover check (named, not taught). Verified 2026-11-05.
 - [Tool: VisuAlgo — Graph Traversal (DFS/BFS)](https://visualgo.net/en/dfsbfs)
   Animated DFS/BFS plus topological sort (both DFS-based and Kahn's). Use for: watching a traversal before hand-tracing one. Verified 2026-08-14.
+- [Tool: VisuAlgo — Union-Find DS](https://visualgo.net/en/ufds)
+  Interactive FindSet / IsSameSet / UnionSet with path compression; uses union by RANK (height), not size. Use for: watching L7's structure run. Verified 2026-11-05.
 - [Videos: NeetCode YouTube channel](https://www.youtube.com/@NeetCode)
   Per-problem walkthroughs for all 13 roadmap problems. **Use only AFTER an honest solo attempt** — full solutions; watching early violates the mission.
 
@@ -46,6 +51,7 @@
 ## Gaps
 
 - No verified visualizer for **union-find** yet (VisuAlgo has `/ufds`, unverified) — check before the DSU lesson.
+  **Resolved 2026-11-05:** VisuAlgo `/ufds` verified (union by rank, path compression), now listed under tools.
 - Multi-source BFS (Rotting Oranges, Walls and Gates) rarely gets standalone high-trust treatment without spoiling those exact problems — the lesson will need first-principles construction, like the heap track's two-heaps lesson.
   **Resolved 2026-09-17:** algs4 §4.2 gives the technique a name and a problem statement without touching either problem — used as L5's primary source.
 - Erickson ch. 5 is too large for automated fetching (>10 MB); quote it from a local copy or cite by section only.
